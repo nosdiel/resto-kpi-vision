@@ -148,17 +148,20 @@ function WeeklyPnlCard({
   quarterNum,
   week,
   vendors,
+  isAdmin,
 }: {
   locationId: string;
   fiscalYear: number;
   quarterNum: number;
   week: WeekRow;
   vendors: VendorRow[];
+  isAdmin: boolean;
 }) {
   const qc = useQueryClient();
   const upsert = useServerFn(upsertWeeklyPnl);
   const addVendor = useServerFn(addPnlVendor);
   const removeVendor = useServerFn(removePnlVendor);
+  const renameVendor = useServerFn(renamePnlVendor);
 
   const [wages, setWages] = useState(week.wages);
   const [beerWineCost, setBeerWineCost] = useState(week.beerWineCost);
@@ -226,6 +229,12 @@ function WeeklyPnlCard({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const renameVendorMut = useMutation({
+    mutationFn: (v: { vendorId: string; name: string }) => renameVendor({ data: v }),
+    onSuccess: () => { toast.success("Vendor renamed"); invalidate(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const setAmt = (id: string, val: string) => {
     const n = val === "" ? 0 : Number(val);
     setVendorAmounts((prev) => ({ ...prev, [id]: isNaN(n) ? 0 : n }));
@@ -267,6 +276,7 @@ function WeeklyPnlCard({
               onChange={(n) => setAmt(v.id, String(n))}
               pct={pct(Number(vendorAmounts[v.id]) || 0)}
               onRemove={() => removeVendorMut.mutate(v.id)}
+              onRename={isAdmin ? (name) => renameVendorMut.mutate({ vendorId: v.id, name }) : undefined}
             />
           ))}
           <AddVendor
@@ -294,6 +304,7 @@ function WeeklyPnlCard({
               onChange={(n) => setAmt(v.id, String(n))}
               pct={pct(Number(vendorAmounts[v.id]) || 0)}
               onRemove={() => removeVendorMut.mutate(v.id)}
+              onRename={isAdmin ? (name) => renameVendorMut.mutate({ vendorId: v.id, name }) : undefined}
             />
           ))}
           <AddVendor
@@ -351,6 +362,7 @@ function EditableRow({
   pct,
   bold,
   onRemove,
+  onRename,
 }: {
   label: string;
   value: number;
@@ -358,10 +370,50 @@ function EditableRow({
   pct: string;
   bold?: boolean;
   onRemove?: () => void;
+  onRename?: (name: string) => void;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(label);
+  useEffect(() => { setDraft(label); }, [label]);
+  const commit = () => {
+    const next = draft.trim();
+    if (next && next !== label && onRename) onRename(next);
+    setEditing(false);
+  };
   return (
     <div className="grid grid-cols-[1fr_140px_80px_auto] gap-3 items-center py-1.5 px-2 text-sm">
-      <div className={bold ? "font-semibold" : ""}>{label}</div>
+      {editing && onRename ? (
+        <div className="flex gap-1 items-center">
+          <Input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { e.preventDefault(); commit(); }
+              if (e.key === "Escape") { setDraft(label); setEditing(false); }
+            }}
+            autoFocus
+            className="h-7"
+          />
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={commit} title="Save name">
+            <Check className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ) : (
+        <div className={`flex items-center gap-1 group ${bold ? "font-semibold" : ""}`}>
+          <span>{label}</span>
+          {onRename && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 opacity-0 group-hover:opacity-100 print:hidden"
+              onClick={() => setEditing(true)}
+              title="Rename vendor"
+            >
+              <Pencil className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
+      )}
       <Input
         type="number"
         step="0.01"
