@@ -54,9 +54,10 @@ function BonusCalculatorPage() {
     const payoutPct = lookupPayoutPct(salesPct);
     const gateMet = payrollMet && foodCostMet;
     const baseBonus = salary * (basePct / 100);
-    const bonus = gateMet ? baseBonus * (payoutPct / 100) : 0;
+    const fullBonus = baseBonus * (payoutPct / 100);
+    const bonus = gateMet ? fullBonus : fullBonus * 0.4;
 
-    return { salesPct, payoutPct, baseBonus, bonus, gateMet };
+    return { salesPct, payoutPct, baseBonus, fullBonus, bonus, gateMet };
   }, [qtrSalary, salesTarget, actualSales, bonusPctOfSalary, payrollMet, foodCostMet]);
 
   return (
@@ -65,7 +66,8 @@ function BonusCalculatorPage() {
         <h1 className="text-2xl font-semibold">Bonus Calculator</h1>
         <p className="text-sm text-muted-foreground">
           Store manager bonus: 15% of QTR salary at 100% sales target, scaled by
-          payout table. Requires payroll & food cost targets to be met.
+          payout table. If payroll or food cost targets are missed, bonus is
+          reduced to 40%.
         </p>
       </div>
 
@@ -141,8 +143,9 @@ function BonusCalculatorPage() {
           <span className="font-medium">{fmtCurrency(result.baseBonus)}</span>
         </div>
         {!result.gateMet && (
-          <div className="text-sm text-destructive">
-            Bonus forfeited — payroll and food cost targets must both be met.
+          <div className="flex justify-between text-sm text-destructive">
+            <span>Payroll or food cost target missed</span>
+            <span>-60% penalty applied</span>
           </div>
         )}
         <div className="flex justify-between text-lg">
