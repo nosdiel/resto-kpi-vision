@@ -54,9 +54,10 @@ function BonusCalculatorPage() {
     const payoutPct = lookupPayoutPct(salesPct);
     const gateMet = payrollMet && foodCostMet;
     const baseBonus = salary * (basePct / 100);
-    const bonus = gateMet ? baseBonus * (payoutPct / 100) : 0;
+    const fullBonus = baseBonus * (payoutPct / 100);
+    const bonus = gateMet ? fullBonus : fullBonus * 0.4;
 
-    return { salesPct, payoutPct, baseBonus, bonus, gateMet };
+    return { salesPct, payoutPct, baseBonus, fullBonus, bonus, gateMet };
   }, [qtrSalary, salesTarget, actualSales, bonusPctOfSalary, payrollMet, foodCostMet]);
 
   return (
