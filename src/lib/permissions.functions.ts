@@ -90,7 +90,7 @@ export const getMyPermissions = createServerFn({ method: "GET" })
     const { data: perms, error } = await supabase
       .from("role_permissions")
       .select("permission")
-      .in("role", roles);
+      .in("role", roles as ("admin" | "regional_manager" | "store_manager" | "super_admin")[]);
     if (error) throw new Error(error.message);
     const set = new Set((perms ?? []).map((p) => p.permission));
     return { roles, permissions: Array.from(set) };
