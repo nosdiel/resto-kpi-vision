@@ -25,11 +25,9 @@ const PAYOUT_TABLE: Array<{ pct: number; payout: number }> = [
   { pct: 98, payout: 70 },
   { pct: 99, payout: 80 },
   { pct: 100, payout: 100 },
-  { pct: 102, payout: 120 },
-  { pct: 103, payout: 130 },
-  { pct: 104, payout: 140 },
-  { pct: 105, payout: 150 },
-  { pct: 106, payout: 160 },
+  { pct: 105, payout: 130 },
+  { pct: 110, payout: 150 },
+  { pct: 130, payout: 170 },
 ];
 
 function lookupPayoutPct(salesPct: number): number {
