@@ -143,8 +143,9 @@ function BonusCalculatorPage() {
           <span className="font-medium">{fmtCurrency(result.baseBonus)}</span>
         </div>
         {!result.gateMet && (
-          <div className="text-sm text-destructive">
-            Bonus forfeited — payroll and food cost targets must both be met.
+          <div className="flex justify-between text-sm text-destructive">
+            <span>Payroll or food cost target missed</span>
+            <span>-60% penalty applied</span>
           </div>
         )}
         <div className="flex justify-between text-lg">
