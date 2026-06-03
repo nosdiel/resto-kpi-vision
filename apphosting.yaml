@@ -6,3 +6,12 @@ runConfig:
   maxInstances: 10
   minInstances: 0
   concurrency: 80
+
+# Tell vite.config.ts to emit a Node server (nitro `node-server` preset)
+# at .output/server/index.mjs so `npm run start` boots a real HTTP listener
+# on process.env.PORT (Cloud Run sets PORT=8080).
+env:
+  - variable: BUILD_TARGET
+    value: firebase
+    availability:
+      - BUILD
