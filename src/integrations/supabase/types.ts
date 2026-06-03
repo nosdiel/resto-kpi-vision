@@ -227,6 +227,7 @@ export type Database = {
           access_token: string
           created_at: string
           created_by: string | null
+          environment: string
           id: string
           location_id: string
           merchant_id: string | null
@@ -239,6 +240,7 @@ export type Database = {
           access_token: string
           created_at?: string
           created_by?: string | null
+          environment?: string
           id?: string
           location_id: string
           merchant_id?: string | null
@@ -251,6 +253,7 @@ export type Database = {
           access_token?: string
           created_at?: string
           created_by?: string | null
+          environment?: string
           id?: string
           location_id?: string
           merchant_id?: string | null
