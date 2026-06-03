@@ -366,7 +366,7 @@ export const getQtrReport = createServerFn({ method: "POST" })
         payroll: { goal: salesGoal * CATEGORY_PCTS.payroll, actual: wages },
         food: { goal: salesGoal * CATEGORY_PCTS.food, actual: foodActual },
         catering: { goal: salesGoal * CATEGORY_PCTS.catering, actual: cateringActual },
-        paper: { goal: salesGoal * CATEGORY_PCTS.paper, actual: paperActual },
+        paper: { goal: actualSales * 0.035, actual: paperActual },
       };
     });
 
