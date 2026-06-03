@@ -34,6 +34,7 @@ function QtrPage() {
   const [fiscalYear, setFiscalYear] = useState(initial.fiscalYear);
   const [quarter, setQuarter] = useState(defaultQuarter);
   const [locationId, setLocationId] = useState<string | null>(null);
+  const [region, setRegion] = useState<string>("__all__");
 
   const fetchData = useServerFn(getQtrReport);
   const { data, isLoading, refetch, isFetching } = useQuery({
@@ -42,6 +43,13 @@ function QtrPage() {
   });
 
   const years = [currentYear - 1, currentYear, currentYear + 1];
+
+  const allLocations = (data?.locations ?? []) as { id: string; name: string; region?: string | null }[];
+  const regions = Array.from(
+    new Set(allLocations.map((l) => (l.region ?? "").trim()).filter(Boolean)),
+  ).sort();
+  const filteredLocations =
+    region === "__all__" ? allLocations : allLocations.filter((l) => (l.region ?? "") === region);
 
   return (
     <div className="p-6 space-y-5">
@@ -63,15 +71,35 @@ function QtrPage() {
       </header>
 
       <Card className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <Filter label="Region">
+            <Select
+              value={region}
+              onValueChange={(v) => {
+                setRegion(v);
+                if (v !== "__all__") {
+                  const first = allLocations.find((l) => (l.region ?? "") === v);
+                  if (first) setLocationId(first.id);
+                }
+              }}
+            >
+              <SelectTrigger><SelectValue placeholder="All regions" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All regions</SelectItem>
+                {regions.map((r) => (
+                  <SelectItem key={r} value={r}>{r}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Filter>
           <Filter label="Location">
             <Select value={locationId ?? data?.locationId ?? ""} onValueChange={(v) => setLocationId(v)}>
               <SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger>
               <SelectContent>
-                {(data?.locations ?? []).map((l) => (
+                {filteredLocations.map((l) => (
                   <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
                 ))}
-                {!data?.locations?.length && <SelectItem value="none" disabled>No locations yet</SelectItem>}
+                {!filteredLocations.length && <SelectItem value="none" disabled>No locations</SelectItem>}
               </SelectContent>
             </Select>
           </Filter>
