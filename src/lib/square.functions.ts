@@ -205,10 +205,29 @@ export const syncSquareLocation = createServerFn({ method: "POST" })
     startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   }).parse(d))
+  .handler(async ({ data }) => runSquareSync(data.locationId, data.startDate, data.endDate));
+
+export const backfillSquareFiscalPeriods = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ locationId: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: fy, error: fyErr } = await supabaseAdmin
+      .from("fiscal_year_settings")
+      .select("start_date")
+      .order("start_date", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (fyErr) throw new Error(fyErr.message);
+    const today = new Date().toISOString().slice(0, 10);
+    const start = fy?.start_date ?? new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10);
+    return runSquareSync(data.locationId, start, today);
+  });
+
+async function runSquareSync(locationId: string, startDate: string, endDate: string) {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: conn, error: connErr } = await supabaseAdmin
-      .from("square_connections").select("*").eq("location_id", data.locationId).maybeSingle();
+      .from("square_connections").select("*").eq("location_id", locationId).maybeSingle();
     if (connErr) throw new Error(connErr.message);
     if (!conn?.access_token || !conn.square_location_id) {
       return { ok: false, daysSynced: 0, error: SQUARE_CONNECTION_ERROR };
@@ -225,8 +244,8 @@ export const syncSquareLocation = createServerFn({ method: "POST" })
       return { ok: false, daysSynced: 0, error: SQUARE_CONNECTION_ERROR };
     }
 
-    const beginIso = new Date(`${data.startDate}T00:00:00Z`).toISOString();
-    const endIso = new Date(`${data.endDate}T23:59:59Z`).toISOString();
+    const beginIso = new Date(`${startDate}T00:00:00Z`).toISOString();
+    const endIso = new Date(`${endDate}T23:59:59Z`).toISOString();
     let cursor: string | undefined = undefined;
     const ordersByDate: Record<string, { sales: number; count: number }> = {};
 
@@ -248,7 +267,7 @@ export const syncSquareLocation = createServerFn({ method: "POST" })
       });
       if (!res.ok) {
         const response = await readSquareError(res);
-        console.error("Square sync failed", { status: res.status, environment: env, locationId: data.locationId, squareLocationId: conn.square_location_id, response });
+        console.error("Square sync failed", { status: res.status, environment: env, locationId, squareLocationId: conn.square_location_id, response });
         return { ok: false, daysSynced: 0, error: res.status === 401 || res.status === 403 ? SQUARE_CONNECTION_ERROR : `Square API error ${res.status}: ${response}` };
       }
       const json = (await res.json()) as { orders?: Array<{ closed_at?: string; total_money?: { amount?: number } }>; cursor?: string };
@@ -264,7 +283,7 @@ export const syncSquareLocation = createServerFn({ method: "POST" })
     } while (cursor);
 
     const rows = Object.entries(ordersByDate).map(([date, agg]) => ({
-      location_id: data.locationId,
+      location_id: locationId,
       business_date: date,
       actual_sales: Number(agg.sales.toFixed(2)),
       actual_customer_count: agg.count,
@@ -276,4 +295,4 @@ export const syncSquareLocation = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
     }
     return { ok: true, daysSynced: rows.length, error: null };
-  });
+}

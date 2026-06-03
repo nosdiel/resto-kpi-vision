@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { listLocations } from "@/lib/admin.functions";
-import { getSquareConnectionLocations, listSquareConnections, saveSquareConnection, syncSquareLocation, testSquareConnection } from "@/lib/square.functions";
+import { backfillSquareFiscalPeriods, getSquareConnectionLocations, listSquareConnections, saveSquareConnection, syncSquareLocation, testSquareConnection } from "@/lib/square.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Plug, RefreshCw, Plus, ShieldAlert } from "lucide-react";
+import { CalendarRange, CheckCircle2, Plug, Plus, RefreshCw, ShieldAlert } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/square")({
   head: () => ({ meta: [{ title: "Square Sync" }] }),
@@ -29,6 +29,7 @@ function SquarePage() {
   const [editingLocId, setEditingLocId] = useState<string | null>(null);
 
   const sync = useServerFn(syncSquareLocation);
+  const backfill = useServerFn(backfillSquareFiscalPeriods);
   const today = new Date().toISOString().slice(0, 10);
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
 
@@ -43,6 +44,20 @@ function SquarePage() {
       toast.success(`Sync complete: ${result.daysSynced} day${result.daysSynced === 1 ? "" : "s"} updated`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Sync failed");
+    }
+  };
+
+  const runBackfill = async (locationId: string) => {
+    try {
+      toast.info("Loading previous fiscal periods…");
+      const result = await backfill({ data: { locationId } });
+      if (!result.ok) {
+        toast.error(result.error ?? "Square backfill failed");
+        return;
+      }
+      toast.success(`Backfill complete: ${result.daysSynced} day${result.daysSynced === 1 ? "" : "s"} loaded`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Backfill failed");
     }
   };
 
@@ -95,9 +110,14 @@ function SquarePage() {
                       <Plug className="h-4 w-4 mr-1" /> {c ? "Update" : "Connect"}
                     </Button>
                     {c && (
-                      <Button size="sm" variant="ghost" onClick={() => runSync(l.id)}>
-                        <RefreshCw className="h-4 w-4 mr-1" /> Sync 7d
-                      </Button>
+                      <>
+                        <Button size="sm" variant="ghost" onClick={() => runSync(l.id)}>
+                          <RefreshCw className="h-4 w-4 mr-1" /> Sync 7d
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => runBackfill(l.id)}>
+                          <CalendarRange className="h-4 w-4 mr-1" /> Backfill fiscal
+                        </Button>
+                      </>
                     )}
                   </TableCell>
                 </TableRow>
@@ -106,7 +126,14 @@ function SquarePage() {
           </TableBody>
         </Table>
       </Card>
-      {editingLocId && <ConnectDialog locationId={editingLocId} initial={connByLoc.get(editingLocId)} onClose={() => setEditingLocId(null)} />}
+      {editingLocId && (
+        <ConnectDialog
+          locationId={editingLocId}
+          initial={connByLoc.get(editingLocId)}
+          onClose={() => setEditingLocId(null)}
+          onConnected={(id) => runBackfill(id)}
+        />
+      )}
     </div>
   );
 }
@@ -123,7 +150,7 @@ type SquareLocationChoice = {
 const requiredSquarePermissions = ["ORDERS_READ", "PAYMENTS_READ", "MERCHANT_PROFILE_READ", "ITEMS_READ"];
 const squareConnectionError = "Square token missing permission or location does not belong to this Square account/environment.";
 
-function ConnectDialog({ locationId, initial, onClose }: { locationId: string; initial: any; onClose: () => void }) {
+function ConnectDialog({ locationId, initial, onClose, onConnected }: { locationId: string; initial: any; onClose: () => void; onConnected?: (locationId: string) => void }) {
   const qc = useQueryClient();
   const save = useServerFn(saveSquareConnection);
   const testToken = useServerFn(testSquareConnection);
@@ -193,6 +220,7 @@ function ConnectDialog({ locationId, initial, onClose }: { locationId: string; i
       }
       toast.success("Square location mapping saved");
       qc.invalidateQueries({ queryKey: ["square-conns"] });
+      if (!initial && onConnected) onConnected(locationId);
       onClose();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Save failed");
