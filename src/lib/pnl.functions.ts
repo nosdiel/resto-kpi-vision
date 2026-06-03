@@ -266,25 +266,25 @@ export const getQtrReport = createServerFn({ method: "POST" })
     ] = await Promise.all([
       supabase
         .from("pnl_vendors")
-        .select("id, name, section")
-        .eq("location_id", locationId)
+        .select("id, name, section, location_id")
+        .in("location_id", locationIds)
         .eq("active", true),
       supabase
         .from("daily_sales")
-        .select("business_date, actual_sales, last_year_sales, last_year_customer_count")
-        .eq("location_id", locationId)
+        .select("location_id, business_date, actual_sales, last_year_sales, last_year_customer_count")
+        .in("location_id", locationIds)
         .in("business_date", [...allDates, ...prevDates]),
       supabase
         .from("weekly_pnl")
-        .select("fiscal_week, wages, beer_wine_cost, catering, vendor_amounts")
-        .eq("location_id", locationId)
+        .select("location_id, fiscal_week, wages, beer_wine_cost, catering, vendor_amounts")
+        .in("location_id", locationIds)
         .eq("fiscal_year", data.fiscalYear)
         .gte("fiscal_week", startWeek)
         .lte("fiscal_week", endWeek),
       supabase
         .from("weekly_targets")
-        .select("fiscal_week, target_pct_over_ly")
-        .eq("location_id", locationId)
+        .select("location_id, fiscal_week, target_pct_over_ly")
+        .in("location_id", locationIds)
         .eq("fiscal_year", data.fiscalYear)
         .gte("fiscal_week", startWeek)
         .lte("fiscal_week", endWeek),
