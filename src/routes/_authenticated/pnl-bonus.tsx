@@ -30,6 +30,12 @@ const PAYOUT_TABLE: Array<{ pct: number; payout: number }> = [
   { pct: 130, payout: 170 },
 ];
 
+type BonusQtrRow = {
+  sales: { goal: number; actual: number };
+  payroll: { goal: number; actual: number };
+  food: { goal: number; actual: number };
+};
+
 function lookupPayoutPct(salesPct: number): number {
   if (salesPct < 95) return 0;
   let match = 0;
@@ -67,9 +73,9 @@ function BonusCalculatorPage() {
 
   // QTD totals from the report
   const qtdTotals = useMemo(() => {
-    const rows = qtr?.rows ?? [];
+    const rows = (qtr?.rows ?? []) as BonusQtrRow[];
     return rows.reduce(
-      (acc, r) => {
+      (acc: { salesGoal: number; salesActual: number; payrollGoal: number; payrollActual: number; foodGoal: number; foodActual: number }, r: BonusQtrRow) => {
         acc.salesGoal += r.sales.goal;
         acc.salesActual += r.sales.actual;
         acc.payrollGoal += r.payroll.goal;
