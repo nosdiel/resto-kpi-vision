@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { listLocations } from "@/lib/admin.functions";
-import { listToastConnections, saveToastConnection, syncToastLocation } from "@/lib/toast.functions";
+import { backfillToastFiscalPeriods, listToastConnections, saveToastConnection, syncToastLocation } from "@/lib/toast.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plug, RefreshCw, Plus } from "lucide-react";
+import { CalendarRange, Plug, Plus, RefreshCw } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/toast")({
   head: () => ({ meta: [{ title: "Toast Sync" }] }),
@@ -28,6 +28,7 @@ function ToastPage() {
   const [editingLocId, setEditingLocId] = useState<string | null>(null);
 
   const sync = useServerFn(syncToastLocation);
+  const backfill = useServerFn(backfillToastFiscalPeriods);
   const today = new Date().toISOString().slice(0, 10);
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
 
@@ -38,6 +39,16 @@ function ToastPage() {
       toast.success("Sync complete");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Sync failed");
+    }
+  };
+
+  const runBackfill = async (locationId: string) => {
+    try {
+      toast.info("Loading previous fiscal periods…");
+      const result = await backfill({ data: { locationId } });
+      toast.success(`Backfill complete: ${result.daysSynced} day${result.daysSynced === 1 ? "" : "s"} loaded`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Backfill failed");
     }
   };
 
@@ -88,9 +99,14 @@ function ToastPage() {
                       <Plug className="h-4 w-4 mr-1" /> {c ? "Update" : "Connect"}
                     </Button>
                     {c && (
-                      <Button size="sm" variant="ghost" onClick={() => runSync(l.id)}>
-                        <RefreshCw className="h-4 w-4 mr-1" /> Sync 7d
-                      </Button>
+                      <>
+                        <Button size="sm" variant="ghost" onClick={() => runSync(l.id)}>
+                          <RefreshCw className="h-4 w-4 mr-1" /> Sync 7d
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => runBackfill(l.id)}>
+                          <CalendarRange className="h-4 w-4 mr-1" /> Backfill fiscal
+                        </Button>
+                      </>
                     )}
                   </TableCell>
                 </TableRow>
@@ -99,12 +115,19 @@ function ToastPage() {
           </TableBody>
         </Table>
       </Card>
-      {editingLocId && <ConnectDialog locationId={editingLocId} initial={connByLoc.get(editingLocId)} onClose={() => setEditingLocId(null)} />}
+      {editingLocId && (
+        <ConnectDialog
+          locationId={editingLocId}
+          initial={connByLoc.get(editingLocId)}
+          onClose={() => setEditingLocId(null)}
+          onConnected={(id) => runBackfill(id)}
+        />
+      )}
     </div>
   );
 }
 
-function ConnectDialog({ locationId, initial, onClose }: { locationId: string; initial: any; onClose: () => void }) {
+function ConnectDialog({ locationId, initial, onClose, onConnected }: { locationId: string; initial: any; onClose: () => void; onConnected?: (locationId: string) => void }) {
   const qc = useQueryClient();
   const save = useServerFn(saveToastConnection);
   const [guid, setGuid] = useState(initial?.toast_restaurant_guid ?? "");
@@ -122,6 +145,7 @@ function ConnectDialog({ locationId, initial, onClose }: { locationId: string; i
       await save({ data: { locationId, toastRestaurantGuid: guid, clientId, clientSecret, environment } });
       toast.success("Connection saved");
       qc.invalidateQueries({ queryKey: ["toast-conns"] });
+      if (!initial && onConnected) onConnected(locationId);
       onClose();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Save failed");
