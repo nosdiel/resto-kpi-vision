@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { listLocations } from "@/lib/admin.functions";
-import { listSquareConnections, saveSquareConnection, syncSquareLocation } from "@/lib/square.functions";
+import { getSquareConnectionLocations, listSquareConnections, saveSquareConnection, syncSquareLocation, testSquareConnection } from "@/lib/square.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plug, RefreshCw, Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { CheckCircle2, Plug, RefreshCw, Plus, ShieldAlert } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/square")({
   head: () => ({ meta: [{ title: "Square Sync" }] }),
