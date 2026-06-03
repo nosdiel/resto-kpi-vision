@@ -179,6 +179,7 @@
   body > div,
   main,
   main > div { min-height: 0 !important; height: auto !important; }
+  body > div { display: block !important; }
   table { width: 100% !important; font-size: 10px !important; line-height: 1.12 !important; page-break-inside: avoid; }
   table th, table td { padding: 1px 4px !important; }
   main { display: block !important; width: 100% !important; }
@@ -190,6 +191,7 @@
     margin: 0 !important;
   }
   .grid { page-break-inside: avoid !important; break-inside: avoid !important; gap: 6px !important; }
+  main > div > .grid:last-child { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
   /* Ensure filter Select triggers print their value */
   [data-slot="select-trigger"], button[role="combobox"] {
     border: 1px solid #ccc !important;
