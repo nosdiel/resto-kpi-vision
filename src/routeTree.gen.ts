@@ -17,6 +17,7 @@ import { Route as AuthenticatedToastRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedTargetsRouteImport } from './routes/_authenticated/targets'
 import { Route as AuthenticatedSquareRouteImport } from './routes/_authenticated/square'
 import { Route as AuthenticatedPnlQtrRouteImport } from './routes/_authenticated/pnl-qtr'
+import { Route as AuthenticatedPnlBonusRouteImport } from './routes/_authenticated/pnl-bonus'
 import { Route as AuthenticatedPnlRouteImport } from './routes/_authenticated/pnl'
 import { Route as AuthenticatedPermissionsRouteImport } from './routes/_authenticated/permissions'
 import { Route as AuthenticatedLocationsRouteImport } from './routes/_authenticated/locations'
@@ -62,6 +63,11 @@ const AuthenticatedPnlQtrRoute = AuthenticatedPnlQtrRouteImport.update({
   path: '/pnl-qtr',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPnlBonusRoute = AuthenticatedPnlBonusRouteImport.update({
+  id: '/pnl-bonus',
+  path: '/pnl-bonus',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPnlRoute = AuthenticatedPnlRouteImport.update({
   id: '/pnl',
   path: '/pnl',
@@ -97,6 +103,7 @@ export interface FileRoutesByFullPath {
   '/locations': typeof AuthenticatedLocationsRoute
   '/permissions': typeof AuthenticatedPermissionsRoute
   '/pnl': typeof AuthenticatedPnlRoute
+  '/pnl-bonus': typeof AuthenticatedPnlBonusRoute
   '/pnl-qtr': typeof AuthenticatedPnlQtrRoute
   '/square': typeof AuthenticatedSquareRoute
   '/targets': typeof AuthenticatedTargetsRoute
@@ -111,6 +118,7 @@ export interface FileRoutesByTo {
   '/locations': typeof AuthenticatedLocationsRoute
   '/permissions': typeof AuthenticatedPermissionsRoute
   '/pnl': typeof AuthenticatedPnlRoute
+  '/pnl-bonus': typeof AuthenticatedPnlBonusRoute
   '/pnl-qtr': typeof AuthenticatedPnlQtrRoute
   '/square': typeof AuthenticatedSquareRoute
   '/targets': typeof AuthenticatedTargetsRoute
@@ -127,6 +135,7 @@ export interface FileRoutesById {
   '/_authenticated/locations': typeof AuthenticatedLocationsRoute
   '/_authenticated/permissions': typeof AuthenticatedPermissionsRoute
   '/_authenticated/pnl': typeof AuthenticatedPnlRoute
+  '/_authenticated/pnl-bonus': typeof AuthenticatedPnlBonusRoute
   '/_authenticated/pnl-qtr': typeof AuthenticatedPnlQtrRoute
   '/_authenticated/square': typeof AuthenticatedSquareRoute
   '/_authenticated/targets': typeof AuthenticatedTargetsRoute
@@ -143,6 +152,7 @@ export interface FileRouteTypes {
     | '/locations'
     | '/permissions'
     | '/pnl'
+    | '/pnl-bonus'
     | '/pnl-qtr'
     | '/square'
     | '/targets'
@@ -157,6 +167,7 @@ export interface FileRouteTypes {
     | '/locations'
     | '/permissions'
     | '/pnl'
+    | '/pnl-bonus'
     | '/pnl-qtr'
     | '/square'
     | '/targets'
@@ -172,6 +183,7 @@ export interface FileRouteTypes {
     | '/_authenticated/locations'
     | '/_authenticated/permissions'
     | '/_authenticated/pnl'
+    | '/_authenticated/pnl-bonus'
     | '/_authenticated/pnl-qtr'
     | '/_authenticated/square'
     | '/_authenticated/targets'
@@ -243,6 +255,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPnlQtrRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/pnl-bonus': {
+      id: '/_authenticated/pnl-bonus'
+      path: '/pnl-bonus'
+      fullPath: '/pnl-bonus'
+      preLoaderRoute: typeof AuthenticatedPnlBonusRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/pnl': {
       id: '/_authenticated/pnl'
       path: '/pnl'
@@ -287,6 +306,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedLocationsRoute: typeof AuthenticatedLocationsRoute
   AuthenticatedPermissionsRoute: typeof AuthenticatedPermissionsRoute
   AuthenticatedPnlRoute: typeof AuthenticatedPnlRoute
+  AuthenticatedPnlBonusRoute: typeof AuthenticatedPnlBonusRoute
   AuthenticatedPnlQtrRoute: typeof AuthenticatedPnlQtrRoute
   AuthenticatedSquareRoute: typeof AuthenticatedSquareRoute
   AuthenticatedTargetsRoute: typeof AuthenticatedTargetsRoute
@@ -300,6 +320,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedLocationsRoute: AuthenticatedLocationsRoute,
   AuthenticatedPermissionsRoute: AuthenticatedPermissionsRoute,
   AuthenticatedPnlRoute: AuthenticatedPnlRoute,
+  AuthenticatedPnlBonusRoute: AuthenticatedPnlBonusRoute,
   AuthenticatedPnlQtrRoute: AuthenticatedPnlQtrRoute,
   AuthenticatedSquareRoute: AuthenticatedSquareRoute,
   AuthenticatedTargetsRoute: AuthenticatedTargetsRoute,
@@ -318,3 +339,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
