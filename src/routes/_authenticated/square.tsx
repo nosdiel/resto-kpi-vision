@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plug, RefreshCw } from "lucide-react";
+import { Plug, RefreshCw, Plus } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/square")({
   head: () => ({ meta: [{ title: "Square Sync" }] }),
@@ -45,9 +45,14 @@ function SquarePage() {
 
   return (
     <div className="p-8 space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Square Sync</h1>
-        <p className="text-sm text-muted-foreground">Connect each dashboard location to a Square location. Sync runs nightly and on demand.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">Square Sync</h1>
+          <p className="text-sm text-muted-foreground">Connect each dashboard location to a Square location. Sync runs nightly and on demand.</p>
+        </div>
+        <Button asChild size="sm" variant="outline">
+          <Link to="/locations"><Plus className="h-4 w-4 mr-1" /> Add location</Link>
+        </Button>
       </div>
       <Card className="p-0 overflow-hidden">
         <Table>
@@ -62,7 +67,14 @@ function SquarePage() {
           </TableHeader>
           <TableBody>
             {(locs ?? []).length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Create a location first.</TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                  <p className="mb-3">No locations yet. Add one to start connecting Square.</p>
+                  <Button asChild size="sm">
+                    <Link to="/locations"><Plus className="h-4 w-4 mr-1" /> Add location</Link>
+                  </Button>
+                </TableCell>
+              </TableRow>
             ) : (locs ?? []).map((l) => {
               const c = connByLoc.get(l.id);
               return (
