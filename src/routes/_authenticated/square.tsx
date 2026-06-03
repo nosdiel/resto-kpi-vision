@@ -155,7 +155,8 @@ function ConnectDialog({ locationId, initial, onClose }: { locationId: string; i
     try {
       const result = await testToken({ data: { accessToken: token.trim(), environment } });
       applyValidationResult(result);
-      toast[result.ok ? "success" : "error"](result.ok ? "Square connection verified" : squareConnectionError);
+      if (result.ok) toast.success("Square connection verified");
+      else toast.error(squareConnectionError);
     } catch (e) {
       setValidationError(squareConnectionError);
       toast.error(e instanceof Error ? e.message : squareConnectionError);
@@ -168,7 +169,8 @@ function ConnectDialog({ locationId, initial, onClose }: { locationId: string; i
     try {
       const result = await loadStoredLocations({ data: { locationId } });
       applyValidationResult(result);
-      toast[result.ok ? "success" : "error"](result.ok ? "Square locations loaded" : squareConnectionError);
+      if (result.ok) toast.success("Square locations loaded");
+      else toast.error(squareConnectionError);
     } catch (e) {
       setValidationError(squareConnectionError);
       toast.error(e instanceof Error ? e.message : squareConnectionError);
