@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { fmtCurrency } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/pnl-bonus")({
@@ -83,13 +84,19 @@ function BonusCalculatorPage() {
             />
           </div>
           <div className="space-y-2">
-            <Label>Bonus % of Salary (at 100% target)</Label>
-            <Input
-              type="number"
+            <Label>Role</Label>
+            <Select
               value={bonusPctOfSalary}
-              onChange={(e) => setBonusPctOfSalary(e.target.value)}
-              placeholder="15"
-            />
+              onValueChange={(v) => setBonusPctOfSalary(v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="15">Store Manager</SelectItem>
+                <SelectItem value="7.5">Assistant Manager</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label>Quarter Sales Target</Label>
