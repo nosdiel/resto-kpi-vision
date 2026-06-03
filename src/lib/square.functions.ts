@@ -50,7 +50,7 @@ export const syncSquareLocation = createServerFn({ method: "POST" })
     startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   }).parse(d))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     // Fetch connection (admin client to read tokens)
     const { data: conn, error: connErr } = await supabaseAdmin
@@ -89,7 +89,21 @@ export const syncSquareLocation = createServerFn({ method: "POST" })
       });
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(`Square API error ${res.status}: ${text.slice(0, 300)}`);
+        const reason = res.status === 403
+          ? "Square rejected the sync. Check that the access token has ORDERS_READ permission and that the Square Location ID belongs to the same Square account and environment."
+          : res.status === 401
+            ? "Square could not authorize this token. Check that the access token is current and matches the selected environment."
+            : `Square API error ${res.status}: ${text.slice(0, 300)}`;
+
+        console.error("Square sync failed", {
+          status: res.status,
+          environment: env,
+          locationId: data.locationId,
+          squareLocationId: conn.square_location_id,
+          response: text.slice(0, 500),
+        });
+
+        return { ok: false, daysSynced: 0, error: reason };
       }
       const json = (await res.json()) as { orders?: Array<{ closed_at?: string; total_money?: { amount?: number } }>; cursor?: string };
       for (const o of json.orders ?? []) {
@@ -116,5 +130,5 @@ export const syncSquareLocation = createServerFn({ method: "POST" })
       const { error } = await supabaseAdmin.from("daily_sales").upsert(rows, { onConflict: "location_id,business_date" });
       if (error) throw new Error(error.message);
     }
-    return { ok: true, daysSynced: rows.length };
+    return { ok: true, daysSynced: rows.length, error: null };
   });
