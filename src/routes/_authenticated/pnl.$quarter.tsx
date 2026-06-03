@@ -23,9 +23,8 @@ const QUARTER_KEYS = ["q1", "q2", "q3", "q4"] as const;
 type QuarterKey = (typeof QUARTER_KEYS)[number];
 
 export const Route = createFileRoute("/_authenticated/pnl/$quarter")({
-  parseParams: ({ quarter }) => {
-    if (!QUARTER_KEYS.includes(quarter as QuarterKey)) throw notFound();
-    return { quarter: quarter as QuarterKey };
+  beforeLoad: ({ params }) => {
+    if (!QUARTER_KEYS.includes(params.quarter as QuarterKey)) throw notFound();
   },
   head: ({ params }) => ({ meta: [{ title: `Weekly PNL — ${params.quarter.toUpperCase()}` }] }),
   component: PnlQuarterPage,
@@ -34,7 +33,7 @@ export const Route = createFileRoute("/_authenticated/pnl/$quarter")({
 });
 
 function PnlQuarterPage() {
-  const { quarter } = Route.useParams();
+  const { quarter } = Route.useParams() as { quarter: QuarterKey };
   const quarterNum = Number(quarter.slice(1));
   const initial = currentFiscalYearWeek();
   const currentYear = new Date().getUTCFullYear();
