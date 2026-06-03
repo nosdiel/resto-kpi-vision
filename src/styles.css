@@ -175,6 +175,15 @@
   .print\:hidden { display: none !important; }
   html, body { background: white !important; height: auto !important; min-height: 0 !important; }
   body * { color: black !important; box-shadow: none !important; }
+  .bg-table-header,
+  .bg-table-totals,
+  tr.bg-table-header,
+  tr.bg-table-totals {
+    background-color: oklch(0.90 0.012 250) !important;
+    color: black !important;
+  }
+  .bg-table-row-alt,
+  tr.bg-table-row-alt { background-color: oklch(0.965 0.004 250) !important; }
   .overflow-x-auto, .overflow-hidden { overflow: visible !important; }
   [class*="min-h-screen"] { min-height: 0 !important; height: auto !important; }
   body > div,
