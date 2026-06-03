@@ -1,5 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo, Fragment } from "react";
+import { useState, useMemo, useEffect, Fragment } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
+import { getQtrReport } from "@/lib/pnl.functions";
+import { currentFiscalYearWeek } from "@/lib/fiscal";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,12 +42,57 @@ function lookupPayoutPct(salesPct: number): number {
 }
 
 function BonusCalculatorPage() {
+  const initial = currentFiscalYearWeek();
+  const currentYear = new Date().getUTCFullYear();
+  const defaultQuarter = Math.min(4, Math.max(1, Math.ceil(Math.max(1, initial.fiscalWeek - 1) / 13)));
+
+  const [fiscalYear, setFiscalYear] = useState(initial.fiscalYear);
+  const [quarter, setQuarter] = useState(defaultQuarter);
+  const [locationId, setLocationId] = useState<string | null>(null);
+
   const [annualSalary, setAnnualSalary] = useState<string>("");
   const [salesTarget, setSalesTarget] = useState<string>("");
   const [actualSales, setActualSales] = useState<string>("");
   const [bonusPctOfSalary, setBonusPctOfSalary] = useState<string>("15");
   const [payrollMet, setPayrollMet] = useState<boolean>(true);
   const [foodCostMet, setFoodCostMet] = useState<boolean>(true);
+  const [autoPull, setAutoPull] = useState<boolean>(true);
+
+  const fetchQtr = useServerFn(getQtrReport);
+  const { data: qtr, isFetching } = useQuery({
+    queryKey: ["bonus-qtr", locationId, fiscalYear, quarter],
+    queryFn: () => fetchQtr({ data: { locationId, fiscalYear, quarter } }),
+    enabled: autoPull,
+  });
+
+  const locations = (qtr?.locations ?? []) as { id: string; name: string }[];
+
+  // QTD totals from the report
+  const qtdTotals = useMemo(() => {
+    const rows = qtr?.rows ?? [];
+    return rows.reduce(
+      (acc, r) => {
+        acc.salesGoal += r.sales.goal;
+        acc.salesActual += r.sales.actual;
+        acc.payrollGoal += r.payroll.goal;
+        acc.payrollActual += r.payroll.actual;
+        acc.foodGoal += r.food.goal;
+        acc.foodActual += r.food.actual;
+        return acc;
+      },
+      { salesGoal: 0, salesActual: 0, payrollGoal: 0, payrollActual: 0, foodGoal: 0, foodActual: 0 },
+    );
+  }, [qtr]);
+
+  // Auto-populate fields from the QTR report
+  useEffect(() => {
+    if (!autoPull || !qtr?.rows?.length) return;
+    setSalesTarget(qtdTotals.salesGoal.toFixed(2));
+    setActualSales(qtdTotals.salesActual.toFixed(2));
+    // payroll/food are "met" when actual is at or under goal (lower is better)
+    setPayrollMet(qtdTotals.payrollActual <= qtdTotals.payrollGoal);
+    setFoodCostMet(qtdTotals.foodActual <= qtdTotals.foodGoal);
+  }, [autoPull, qtr, qtdTotals]);
 
   const result = useMemo(() => {
     const salary = (parseFloat(annualSalary) || 0) / 4; // quarterly salary
@@ -61,6 +110,8 @@ function BonusCalculatorPage() {
     return { salesPct, payoutPct, baseBonus, fullBonus, bonus, gateMet };
   }, [annualSalary, salesTarget, actualSales, bonusPctOfSalary, payrollMet, foodCostMet]);
 
+  const years = [currentYear - 1, currentYear, currentYear + 1];
+
   return (
     <div className="p-6 md:p-8 max-w-3xl space-y-6">
       <div>
@@ -71,6 +122,53 @@ function BonusCalculatorPage() {
           reduced to 40%.
         </p>
       </div>
+
+      <Card className="p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-semibold">Pull from QTR Report</Label>
+          <label className="flex items-center gap-2 cursor-pointer text-sm">
+            <Checkbox checked={autoPull} onCheckedChange={(v) => setAutoPull(v === true)} />
+            <span>Auto-fill sales & gates {isFetching ? "…" : ""}</span>
+          </label>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="space-y-1">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Location</Label>
+            <Select
+              value={locationId ?? qtr?.locationId ?? ""}
+              onValueChange={(v) => setLocationId(v)}
+            >
+              <SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger>
+              <SelectContent>
+                {locations.map((l) => (
+                  <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                ))}
+                {!locations.length && <SelectItem value="none" disabled>No locations</SelectItem>}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Fiscal Year</Label>
+            <Select value={String(fiscalYear)} onValueChange={(v) => setFiscalYear(Number(v))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{years.map((y) => <SelectItem key={y} value={String(y)}>FY {y}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Quarter</Label>
+            <Select value={String(quarter)} onValueChange={(v) => setQuarter(Number(v))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{[1,2,3,4].map((q) => <SelectItem key={q} value={String(q)}>Q{q}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+        </div>
+        {autoPull && qtr?.rows?.length ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs pt-1">
+            <div className="text-muted-foreground">Payroll QTD: <span className={`font-medium ${qtdTotals.payrollActual <= qtdTotals.payrollGoal ? "text-foreground" : "text-destructive"}`}>{fmtCurrency(qtdTotals.payrollActual)} / {fmtCurrency(qtdTotals.payrollGoal)}</span></div>
+            <div className="text-muted-foreground">Food QTD: <span className={`font-medium ${qtdTotals.foodActual <= qtdTotals.foodGoal ? "text-foreground" : "text-destructive"}`}>{fmtCurrency(qtdTotals.foodActual)} / {fmtCurrency(qtdTotals.foodGoal)}</span></div>
+          </div>
+        ) : null}
+      </Card>
 
       <Card className="p-6 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -105,6 +203,7 @@ function BonusCalculatorPage() {
               value={salesTarget}
               onChange={(e) => setSalesTarget(e.target.value)}
               placeholder="0.00"
+              disabled={autoPull}
             />
           </div>
           <div className="space-y-2">
@@ -114,6 +213,7 @@ function BonusCalculatorPage() {
               value={actualSales}
               onChange={(e) => setActualSales(e.target.value)}
               placeholder="0.00"
+              disabled={autoPull}
             />
           </div>
         </div>
@@ -123,6 +223,7 @@ function BonusCalculatorPage() {
             <Checkbox
               checked={payrollMet}
               onCheckedChange={(v) => setPayrollMet(v === true)}
+              disabled={autoPull}
             />
             <span>Payroll % target met</span>
           </label>
@@ -130,6 +231,7 @@ function BonusCalculatorPage() {
             <Checkbox
               checked={foodCostMet}
               onCheckedChange={(v) => setFoodCostMet(v === true)}
+              disabled={autoPull}
             />
             <span>Food cost % target met</span>
           </label>
