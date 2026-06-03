@@ -195,10 +195,6 @@ const CATEGORY_PCTS = {
   paper: 0.03,
 } as const;
 
-function isCateringVendor(name: string): boolean {
-  const n = name.toLowerCase();
-  return n.includes("cafe") || n.includes("catering");
-}
 
 export const getQtrReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
