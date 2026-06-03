@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { getQtrReport } from "@/lib/pnl.functions";
 import { currentFiscalYearWeek } from "@/lib/fiscal";
+import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,12 +62,30 @@ function BonusCalculatorPage() {
   const [payrollMet, setPayrollMet] = useState<boolean>(true);
   const [foodCostMet, setFoodCostMet] = useState<boolean>(true);
   const [autoPull, setAutoPull] = useState<boolean>(true);
+  const [authToken, setAuthToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (active) setAuthToken(data.session?.access_token ?? null);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthToken(session?.access_token ?? null);
+    });
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const fetchQtr = useServerFn(getQtrReport);
   const { data: qtr, isFetching } = useQuery({
     queryKey: ["bonus-qtr", locationId, fiscalYear, quarter],
-    queryFn: () => fetchQtr({ data: { locationId, fiscalYear, quarter } }),
-    enabled: autoPull,
+    queryFn: () => fetchQtr({
+      data: { locationId, fiscalYear, quarter },
+      headers: { Authorization: `Bearer ${authToken}` },
+    }),
+    enabled: autoPull && !!authToken,
   });
 
   const locations = (qtr?.locations ?? []) as { id: string; name: string }[];
