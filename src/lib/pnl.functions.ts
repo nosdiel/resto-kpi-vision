@@ -294,74 +294,89 @@ export const getQtrReport = createServerFn({ method: "POST" })
     if (pErr) throw new Error(pErr.message);
     if (tErr) throw new Error(tErr.message);
 
-    const foodVendorIds = new Set(
-      (vendors ?? []).filter((v) => v.section === "food_purchases").map((v) => v.id),
-    );
-    const paperVendorIds = new Set(
-      (vendors ?? []).filter((v) => v.section === "paper_supplies").map((v) => v.id),
-    );
-
-    const salesByDate = new Map<string, { actual: number; ly: number; lyCust: number }>();
+    const vendorsByLoc = new Map<string, { id: string; section: string }[]>();
+    for (const v of vendors ?? []) {
+      const arr = vendorsByLoc.get(v.location_id) ?? [];
+      arr.push({ id: v.id, section: v.section });
+      vendorsByLoc.set(v.location_id, arr);
+    }
+    const salesByLocDate = new Map<string, Map<string, { actual: number; ly: number; lyCust: number }>>();
     for (const s of sales ?? []) {
-      salesByDate.set(s.business_date, {
+      let m = salesByLocDate.get(s.location_id);
+      if (!m) { m = new Map(); salesByLocDate.set(s.location_id, m); }
+      m.set(s.business_date, {
         actual: Number(s.actual_sales) || 0,
         ly: Number(s.last_year_sales) || 0,
         lyCust: Number(s.last_year_customer_count) || 0,
       });
     }
-    const pnlByWeek = new Map<number, { wages: number; beer: number; catering: number; vendors: Record<string, number> }>();
+    const pnlByLocWeek = new Map<string, Map<number, { wages: number; beer: number; catering: number; vendors: Record<string, number> }>>();
     for (const p of pnls ?? []) {
-      pnlByWeek.set(p.fiscal_week, {
+      let m = pnlByLocWeek.get(p.location_id);
+      if (!m) { m = new Map(); pnlByLocWeek.set(p.location_id, m); }
+      m.set(p.fiscal_week, {
         wages: Number(p.wages) || 0,
         beer: Number(p.beer_wine_cost) || 0,
         catering: Number(p.catering) || 0,
         vendors: (p.vendor_amounts ?? {}) as Record<string, number>,
       });
     }
-    const targetByWeek = new Map<number, number>();
+    const targetByLocWeek = new Map<string, Map<number, number>>();
     for (const t of targets ?? []) {
-      targetByWeek.set(t.fiscal_week, Number(t.target_pct_over_ly) || 0);
+      let m = targetByLocWeek.get(t.location_id);
+      if (!m) { m = new Map(); targetByLocWeek.set(t.location_id, m); }
+      m.set(t.fiscal_week, Number(t.target_pct_over_ly) || 0);
     }
 
     const rows = weeks.map((w) => {
       const dates = weekDateMap.get(w) ?? [];
       let actualSales = 0;
-      let lySales = 0;
-      for (const d of dates) {
-        const s = salesByDate.get(d);
-        if (s) { actualSales += s.actual; lySales += s.ly; }
-        // Fallback: if both LY sales and LY customers are 0, use prior-week actuals (matches Daily Sales)
-        const useFallback = !s || (s.ly === 0 && s.lyCust === 0);
-        if (useFallback) {
-          const prev = new Date(d + "T00:00:00Z");
-          prev.setUTCDate(prev.getUTCDate() - 7);
-          const pk = prev.toISOString().slice(0, 10);
-          const p = salesByDate.get(pk);
-          if (p) lySales += p.actual - (s?.ly ?? 0);
+      let salesGoal = 0;
+      let wagesTotal = 0;
+      let foodActual = 0;
+      let paperActual = 0;
+      let cateringActual = 0;
+
+      for (const lid of locationIds) {
+        const salesMap = salesByLocDate.get(lid);
+        let locActual = 0;
+        let locLy = 0;
+        for (const d of dates) {
+          const s = salesMap?.get(d);
+          if (s) { locActual += s.actual; locLy += s.ly; }
+          const useFallback = !s || (s.ly === 0 && s.lyCust === 0);
+          if (useFallback) {
+            const prev = new Date(d + "T00:00:00Z");
+            prev.setUTCDate(prev.getUTCDate() - 7);
+            const pk = prev.toISOString().slice(0, 10);
+            const p = salesMap?.get(pk);
+            if (p) locLy += p.actual - (s?.ly ?? 0);
+          }
+        }
+        const pctOverLy = targetByLocWeek.get(lid)?.get(w) ?? 0;
+        salesGoal += locLy * (1 + pctOverLy / 100);
+        actualSales += locActual;
+
+        const pnl = pnlByLocWeek.get(lid)?.get(w);
+        wagesTotal += pnl?.wages ?? 0;
+        cateringActual += pnl?.catering ?? 0;
+
+        const locVendors = vendorsByLoc.get(lid) ?? [];
+        const foodIds = new Set(locVendors.filter((v) => v.section === "food_purchases").map((v) => v.id));
+        const paperIds = new Set(locVendors.filter((v) => v.section === "paper_supplies").map((v) => v.id));
+        const vendorAmts = pnl?.vendors ?? {};
+        for (const [vid, amt] of Object.entries(vendorAmts)) {
+          const a = Number(amt) || 0;
+          if (foodIds.has(vid)) foodActual += a;
+          else if (paperIds.has(vid)) paperActual += a;
         }
       }
-      const pctOverLy = targetByWeek.get(w) ?? 0;
-      const salesGoal = lySales * (1 + pctOverLy / 100);
-      const pnl = pnlByWeek.get(w);
-      const wages = pnl?.wages ?? 0;
-      const beer = pnl?.beer ?? 0;
-      const cateringActual = pnl?.catering ?? 0;
-      const vendorAmts = pnl?.vendors ?? {};
-
-      let foodActualOther = 0;
-      let paperActual = 0;
-      for (const [vid, amt] of Object.entries(vendorAmts)) {
-        const a = Number(amt) || 0;
-        if (foodVendorIds.has(vid)) foodActualOther += a;
-        else if (paperVendorIds.has(vid)) paperActual += a;
-      }
-      const foodActual = foodActualOther;
 
       return {
         week: w,
         period: periodMap[w],
         sales: { goal: salesGoal, actual: actualSales },
-        payroll: { goal: salesGoal * CATEGORY_PCTS.payroll, actual: wages },
+        payroll: { goal: salesGoal * CATEGORY_PCTS.payroll, actual: wagesTotal },
         food: { goal: salesGoal * CATEGORY_PCTS.food, actual: foodActual },
         catering: { goal: salesGoal * CATEGORY_PCTS.catering, actual: cateringActual },
         paper: { goal: actualSales * 0.035, actual: paperActual },
@@ -371,6 +386,7 @@ export const getQtrReport = createServerFn({ method: "POST" })
     return {
       locations: locations ?? [],
       locationId,
+      locationIds,
       quarter: data.quarter,
       startWeek,
       endWeek,
