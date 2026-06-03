@@ -182,3 +182,183 @@ export const renamePnlVendor = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/* ---------- Quarter Report ---------- */
+
+const CATEGORY_PCTS = {
+  payroll: 0.20,
+  food: 0.32,
+  catering: 0.03,
+  paper: 0.03,
+} as const;
+
+function isCateringVendor(name: string): boolean {
+  const n = name.toLowerCase();
+  return n.includes("cafe") || n.includes("catering");
+}
+
+export const getQtrReport = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({
+      locationId: z.string().uuid().nullable().optional(),
+      fiscalYear: z.number().int().min(2000).max(2100),
+      quarter: z.number().int().min(1).max(4),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+
+    const { data: locations, error: locErr } = await supabase
+      .from("locations")
+      .select("id, name, active")
+      .eq("active", true)
+      .order("name");
+    if (locErr) throw new Error(locErr.message);
+
+    const locationId = data.locationId || locations?.[0]?.id || null;
+    if (!locationId) {
+      return { locations: locations ?? [], locationId: null, rows: [], periods: [] };
+    }
+
+    const { data: fy } = await supabase
+      .from("fiscal_year_settings")
+      .select("start_date")
+      .eq("fiscal_year", data.fiscalYear)
+      .maybeSingle();
+    const fyStart = fy?.start_date ?? defaultFyStart(data.fiscalYear);
+
+    // 4-4-5 quarter: 13 weeks per quarter
+    const startWeek = (data.quarter - 1) * 13 + 1;
+    const endWeek = startWeek + 12;
+    const weeks: number[] = [];
+    for (let w = startWeek; w <= endWeek; w++) weeks.push(w);
+
+    // Period labels (Q/T/D = period 1/2/3 within the quarter): 4,4,5
+    const periodMap: Record<number, "Q" | "T" | "D"> = {};
+    weeks.forEach((w, i) => {
+      periodMap[w] = i < 4 ? "Q" : i < 8 ? "T" : "D";
+    });
+
+    const allDates: string[] = [];
+    const weekDateMap = new Map<number, string[]>();
+    for (const w of weeks) {
+      const ds = weekDates(fyStart, w);
+      weekDateMap.set(w, ds);
+      allDates.push(...ds);
+    }
+
+    const [
+      { data: vendors, error: vErr },
+      { data: sales, error: sErr },
+      { data: pnls, error: pErr },
+      { data: targets, error: tErr },
+    ] = await Promise.all([
+      supabase
+        .from("pnl_vendors")
+        .select("id, name, section")
+        .eq("location_id", locationId)
+        .eq("active", true),
+      supabase
+        .from("daily_sales")
+        .select("business_date, actual_sales, last_year_sales")
+        .eq("location_id", locationId)
+        .in("business_date", allDates),
+      supabase
+        .from("weekly_pnl")
+        .select("fiscal_week, wages, beer_wine_cost, vendor_amounts")
+        .eq("location_id", locationId)
+        .eq("fiscal_year", data.fiscalYear)
+        .gte("fiscal_week", startWeek)
+        .lte("fiscal_week", endWeek),
+      supabase
+        .from("weekly_targets")
+        .select("fiscal_week, target_pct_over_ly")
+        .eq("location_id", locationId)
+        .eq("fiscal_year", data.fiscalYear)
+        .gte("fiscal_week", startWeek)
+        .lte("fiscal_week", endWeek),
+    ]);
+    if (vErr) throw new Error(vErr.message);
+    if (sErr) throw new Error(sErr.message);
+    if (pErr) throw new Error(pErr.message);
+    if (tErr) throw new Error(tErr.message);
+
+    const foodVendorIds = new Set(
+      (vendors ?? []).filter((v) => v.section === "food_purchases").map((v) => v.id),
+    );
+    const cateringVendorIds = new Set(
+      (vendors ?? [])
+        .filter((v) => v.section === "food_purchases" && isCateringVendor(v.name))
+        .map((v) => v.id),
+    );
+    const paperVendorIds = new Set(
+      (vendors ?? []).filter((v) => v.section === "paper_supplies").map((v) => v.id),
+    );
+
+    const salesByDate = new Map<string, { actual: number; ly: number }>();
+    for (const s of sales ?? []) {
+      salesByDate.set(s.business_date, {
+        actual: Number(s.actual_sales) || 0,
+        ly: Number(s.last_year_sales) || 0,
+      });
+    }
+    const pnlByWeek = new Map<number, { wages: number; beer: number; vendors: Record<string, number> }>();
+    for (const p of pnls ?? []) {
+      pnlByWeek.set(p.fiscal_week, {
+        wages: Number(p.wages) || 0,
+        beer: Number(p.beer_wine_cost) || 0,
+        vendors: (p.vendor_amounts ?? {}) as Record<string, number>,
+      });
+    }
+    const targetByWeek = new Map<number, number>();
+    for (const t of targets ?? []) {
+      targetByWeek.set(t.fiscal_week, Number(t.target_pct_over_ly) || 0);
+    }
+
+    const rows = weeks.map((w) => {
+      const dates = weekDateMap.get(w) ?? [];
+      let actualSales = 0;
+      let lySales = 0;
+      for (const d of dates) {
+        const s = salesByDate.get(d);
+        if (s) { actualSales += s.actual; lySales += s.ly; }
+      }
+      const pctOverLy = targetByWeek.get(w) ?? 0;
+      const salesGoal = lySales * (1 + pctOverLy / 100);
+      const pnl = pnlByWeek.get(w);
+      const wages = pnl?.wages ?? 0;
+      const beer = pnl?.beer ?? 0;
+      const vendorAmts = pnl?.vendors ?? {};
+
+      let cateringActual = 0;
+      let foodActualOther = 0;
+      let paperActual = 0;
+      for (const [vid, amt] of Object.entries(vendorAmts)) {
+        const a = Number(amt) || 0;
+        if (cateringVendorIds.has(vid)) cateringActual += a;
+        else if (foodVendorIds.has(vid)) foodActualOther += a;
+        else if (paperVendorIds.has(vid)) paperActual += a;
+      }
+      const foodActual = foodActualOther + beer;
+
+      return {
+        week: w,
+        period: periodMap[w],
+        sales: { goal: salesGoal, actual: actualSales },
+        payroll: { goal: salesGoal * CATEGORY_PCTS.payroll, actual: wages },
+        food: { goal: salesGoal * CATEGORY_PCTS.food, actual: foodActual },
+        catering: { goal: salesGoal * CATEGORY_PCTS.catering, actual: cateringActual },
+        paper: { goal: salesGoal * CATEGORY_PCTS.paper, actual: paperActual },
+      };
+    });
+
+    return {
+      locations: locations ?? [],
+      locationId,
+      quarter: data.quarter,
+      startWeek,
+      endWeek,
+      rows,
+    };
+  });
