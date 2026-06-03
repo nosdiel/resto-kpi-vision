@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useState, useMemo, Fragment } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { fmtCurrency } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/pnl-bonus")({
@@ -10,79 +11,158 @@ export const Route = createFileRoute("/_authenticated/pnl-bonus")({
   component: BonusCalculatorPage,
 });
 
+// Payout multiplier table based on Sales Target % achievement.
+// Mirrors the QTR bonus structure spreadsheet.
+const PAYOUT_TABLE: Array<{ pct: number; payout: number }> = [
+  { pct: 95, payout: 0 },
+  { pct: 96, payout: 50 },
+  { pct: 97, payout: 60 },
+  { pct: 98, payout: 70 },
+  { pct: 99, payout: 80 },
+  { pct: 100, payout: 100 },
+  { pct: 102, payout: 120 },
+  { pct: 103, payout: 130 },
+  { pct: 104, payout: 140 },
+  { pct: 105, payout: 150 },
+  { pct: 106, payout: 160 },
+];
+
+function lookupPayoutPct(salesPct: number): number {
+  if (salesPct < 95) return 0;
+  let match = 0;
+  for (const row of PAYOUT_TABLE) {
+    if (salesPct >= row.pct) match = row.payout;
+  }
+  return match;
+}
+
 function BonusCalculatorPage() {
-  const [netSales, setNetSales] = useState<string>("");
-  const [targetProfit, setTargetProfit] = useState<string>("");
-  const [actualProfit, setActualProfit] = useState<string>("");
-  const [bonusPct, setBonusPct] = useState<string>("10");
+  const [qtrSalary, setQtrSalary] = useState<string>("");
+  const [salesTarget, setSalesTarget] = useState<string>("");
+  const [actualSales, setActualSales] = useState<string>("");
+  const [bonusPctOfSalary, setBonusPctOfSalary] = useState<string>("15");
+  const [payrollMet, setPayrollMet] = useState<boolean>(true);
+  const [foodCostMet, setFoodCostMet] = useState<boolean>(true);
 
   const result = useMemo(() => {
-    const tp = parseFloat(targetProfit) || 0;
-    const ap = parseFloat(actualProfit) || 0;
-    const pct = parseFloat(bonusPct) || 0;
-    const over = Math.max(0, ap - tp);
-    const bonus = over * (pct / 100);
-    return { over, bonus };
-  }, [targetProfit, actualProfit, bonusPct]);
+    const salary = parseFloat(qtrSalary) || 0;
+    const target = parseFloat(salesTarget) || 0;
+    const actual = parseFloat(actualSales) || 0;
+    const basePct = parseFloat(bonusPctOfSalary) || 0;
+
+    const salesPct = target > 0 ? (actual / target) * 100 : 0;
+    const payoutPct = lookupPayoutPct(salesPct);
+    const gateMet = payrollMet && foodCostMet;
+    const baseBonus = salary * (basePct / 100);
+    const bonus = gateMet ? baseBonus * (payoutPct / 100) : 0;
+
+    return { salesPct, payoutPct, baseBonus, bonus, gateMet };
+  }, [qtrSalary, salesTarget, actualSales, bonusPctOfSalary, payrollMet, foodCostMet]);
 
   return (
     <div className="p-6 md:p-8 max-w-3xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Bonus Calculator</h1>
         <p className="text-sm text-muted-foreground">
-          Calculate manager bonus based on profit performance vs. target.
+          Store manager bonus: 15% of QTR salary at 100% sales target, scaled by
+          payout table. Requires payroll & food cost targets to be met.
         </p>
       </div>
 
       <Card className="p-6 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Net Sales</Label>
+            <Label>Quarter Salary</Label>
             <Input
               type="number"
-              value={netSales}
-              onChange={(e) => setNetSales(e.target.value)}
+              value={qtrSalary}
+              onChange={(e) => setQtrSalary(e.target.value)}
               placeholder="0.00"
             />
           </div>
           <div className="space-y-2">
-            <Label>Bonus % of profit over target</Label>
+            <Label>Bonus % of Salary (at 100% target)</Label>
             <Input
               type="number"
-              value={bonusPct}
-              onChange={(e) => setBonusPct(e.target.value)}
-              placeholder="10"
+              value={bonusPctOfSalary}
+              onChange={(e) => setBonusPctOfSalary(e.target.value)}
+              placeholder="15"
             />
           </div>
           <div className="space-y-2">
-            <Label>Target Profit</Label>
+            <Label>Quarter Sales Target</Label>
             <Input
               type="number"
-              value={targetProfit}
-              onChange={(e) => setTargetProfit(e.target.value)}
+              value={salesTarget}
+              onChange={(e) => setSalesTarget(e.target.value)}
               placeholder="0.00"
             />
           </div>
           <div className="space-y-2">
-            <Label>Actual Profit</Label>
+            <Label>Actual Quarter Sales</Label>
             <Input
               type="number"
-              value={actualProfit}
-              onChange={(e) => setActualProfit(e.target.value)}
+              value={actualSales}
+              onChange={(e) => setActualSales(e.target.value)}
               placeholder="0.00"
             />
           </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4 pt-2">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <Checkbox
+              checked={payrollMet}
+              onCheckedChange={(v) => setPayrollMet(v === true)}
+            />
+            <span>Payroll % target met</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <Checkbox
+              checked={foodCostMet}
+              onCheckedChange={(v) => setFoodCostMet(v === true)}
+            />
+            <span>Food cost % target met</span>
+          </label>
         </div>
       </Card>
 
       <Card className="p-6 space-y-3">
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Profit over target</span>
-          <span className="font-medium">{fmtCurrency(result.over)}</span>
+          <span className="text-muted-foreground">Sales Target %</span>
+          <span className="font-medium">{result.salesPct.toFixed(1)}%</span>
         </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Payout % of Target</span>
+          <span className="font-medium">{result.payoutPct}%</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Base bonus (at 100%)</span>
+          <span className="font-medium">{fmtCurrency(result.baseBonus)}</span>
+        </div>
+        {!result.gateMet && (
+          <div className="text-sm text-destructive">
+            Bonus forfeited — payroll and food cost targets must both be met.
+          </div>
+        )}
         <div className="flex justify-between text-lg">
           <span className="font-semibold">Bonus payout</span>
           <span className="font-bold text-primary">{fmtCurrency(result.bonus)}</span>
+        </div>
+      </Card>
+
+      <Card className="p-6">
+        <h2 className="text-sm font-semibold mb-3">Payout Table</h2>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+          <div className="font-medium text-muted-foreground">Sales Target %</div>
+          <div className="font-medium text-muted-foreground">Payout %</div>
+          <div>&lt; 95%</div><div>0%</div>
+          {PAYOUT_TABLE.map((r) => (
+            <Fragment key={r.pct}>
+              <div>{r.pct}%</div>
+              <div>{r.payout}%</div>
+            </Fragment>
+          ))}
         </div>
       </Card>
     </div>
