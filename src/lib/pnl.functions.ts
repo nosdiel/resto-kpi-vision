@@ -151,7 +151,6 @@ export const upsertWeeklyPnl = createServerFn({ method: "POST" })
   });
 
 export const addPnlVendor = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
     z.object({
       locationId: z.string().uuid(),
@@ -159,8 +158,8 @@ export const addPnlVendor = createServerFn({ method: "POST" })
       name: z.string().min(1).max(120),
     }).parse(d),
   )
-  .handler(async ({ data, context }) => {
-    const { supabase } = context;
+  .handler(async ({ data }) => {
+    const { supabase } = await getAuthenticatedSupabase();
     const { data: maxRow } = await supabase
       .from("pnl_vendors")
       .select("sort_order")
@@ -181,10 +180,10 @@ export const addPnlVendor = createServerFn({ method: "POST" })
   });
 
 export const removePnlVendor = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ vendorId: z.string().uuid() }).parse(d))
-  .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
+  .handler(async ({ data }) => {
+    const { supabase } = await getAuthenticatedSupabase();
+    const { error } = await supabase
       .from("pnl_vendors")
       .update({ active: false })
       .eq("id", data.vendorId);
@@ -193,15 +192,15 @@ export const removePnlVendor = createServerFn({ method: "POST" })
   });
 
 export const renamePnlVendor = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
     z.object({
       vendorId: z.string().uuid(),
       name: z.string().min(1).max(120),
     }).parse(d),
   )
-  .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
+  .handler(async ({ data }) => {
+    const { supabase } = await getAuthenticatedSupabase();
+    const { error } = await supabase
       .from("pnl_vendors")
       .update({ name: data.name })
       .eq("id", data.vendorId);
@@ -220,7 +219,6 @@ const CATEGORY_PCTS = {
 
 
 export const getQtrReport = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
     z.object({
       locationId: z.string().uuid().nullable().optional(),
@@ -229,8 +227,8 @@ export const getQtrReport = createServerFn({ method: "POST" })
       quarter: z.number().int().min(1).max(4),
     }).parse(d),
   )
-  .handler(async ({ data, context }) => {
-    const { supabase } = context;
+  .handler(async ({ data }) => {
+    const { supabase } = await getAuthenticatedSupabase();
 
     const { data: locations, error: locErr } = await supabase
       .from("locations")
