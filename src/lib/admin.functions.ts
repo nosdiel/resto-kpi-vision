@@ -55,11 +55,17 @@ export const setUserRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({
     userId: z.string().uuid(),
-    role: z.enum(["admin", "regional_manager", "store_manager"]),
+    role: z.enum(["super_admin", "admin", "regional_manager", "store_manager"]),
   }).parse(d))
   .handler(async ({ data, context }) => {
-    // Only admins can change roles (RLS enforces)
-    const { supabase } = context;
+    const { supabase, userId: callerId } = context;
+    // Only super_admin can grant admin or super_admin
+    if (data.role === "admin" || data.role === "super_admin") {
+      const { data: callerRoles } = await supabase
+        .from("user_roles").select("role").eq("user_id", callerId);
+      const isSuper = (callerRoles ?? []).some((r) => r.role === "super_admin");
+      if (!isSuper) throw new Error("Only super admins can assign admin roles");
+    }
     const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", data.userId);
     if (delErr) throw new Error(delErr.message);
     const { error } = await supabase.from("user_roles").insert({ user_id: data.userId, role: data.role });
@@ -93,16 +99,21 @@ export const adminCreateUser = createServerFn({ method: "POST" })
       email: z.string().email().max(255),
       password: z.string().min(8).max(128),
       displayName: z.string().min(1).max(120).optional().nullable(),
-      role: z.enum(["admin", "regional_manager", "store_manager"]),
+      role: z.enum(["super_admin", "admin", "regional_manager", "store_manager"]),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase: callerSupabase, userId: callerId } = context;
-    // Guard: caller must be admin
+    // Guard: caller must be admin (or super_admin)
     const { data: callerRoles } = await callerSupabase
       .from("user_roles").select("role").eq("user_id", callerId);
-    const isAdmin = (callerRoles ?? []).some((r) => r.role === "admin");
+    const callerRoleSet = new Set((callerRoles ?? []).map((r) => r.role));
+    const isAdmin = callerRoleSet.has("admin") || callerRoleSet.has("super_admin");
     if (!isAdmin) throw new Error("Only admins can create users");
+    // Only super_admin can create admin or super_admin users
+    if ((data.role === "admin" || data.role === "super_admin") && !callerRoleSet.has("super_admin")) {
+      throw new Error("Only super admins can create admin accounts");
+    }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
@@ -136,5 +147,6 @@ export const getMe = createServerFn({ method: "GET" })
       profile,
       roles: (roles ?? []).map((r) => r.role as string),
       isAdmin: (roles ?? []).some((r) => r.role === "admin"),
+      isSuperAdmin: (roles ?? []).some((r) => r.role === "super_admin"),
     };
   });

@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { listUsersWithRoles, setUserRole, setUserLocations, listLocations, adminCreateUser } from "@/lib/admin.functions";
+import { listUsersWithRoles, setUserRole, setUserLocations, listLocations, adminCreateUser, getMe } from "@/lib/admin.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,8 +22,11 @@ export const Route = createFileRoute("/_authenticated/users")({
 function UsersPage() {
   const fetchUsers = useServerFn(listUsersWithRoles);
   const fetchLocs = useServerFn(listLocations);
+  const fetchMe = useServerFn(getMe);
   const { data: users, isLoading } = useQuery({ queryKey: ["users-roles"], queryFn: () => fetchUsers() });
   const { data: locs } = useQuery({ queryKey: ["locations"], queryFn: () => fetchLocs() });
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => fetchMe() });
+  const isSuper = !!me?.isSuperAdmin;
   const qc = useQueryClient();
   const setRole = useServerFn(setUserRole);
   const [editingLocs, setEditingLocs] = useState<any | null>(null);
@@ -69,10 +72,11 @@ function UsersPage() {
                 <TableCell className="font-medium">{u.email}</TableCell>
                 <TableCell className="text-muted-foreground">{u.display_name ?? "—"}</TableCell>
                 <TableCell>
-                  <Select value={u.roles[0] ?? "store_manager"} onValueChange={(v) => changeRole(u.id, v)}>
+                  <Select value={u.roles.includes("super_admin") ? "super_admin" : (u.roles[0] ?? "store_manager")} onValueChange={(v) => changeRole(u.id, v)}>
                     <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
+                      {isSuper && <SelectItem value="super_admin">Super Admin</SelectItem>}
+                      <SelectItem value="admin" disabled={!isSuper}>Admin{!isSuper ? " (super admin only)" : ""}</SelectItem>
                       <SelectItem value="regional_manager">Regional Manager</SelectItem>
                       <SelectItem value="store_manager">Store Manager</SelectItem>
                     </SelectContent>
@@ -88,18 +92,18 @@ function UsersPage() {
         </Table>
       </Card>
       {editingLocs && <LocationAccessDialog user={editingLocs} locations={locs ?? []} onClose={() => setEditingLocs(null)} />}
-      {adding && <AddUserDialog onClose={() => setAdding(false)} />}
+      {adding && <AddUserDialog onClose={() => setAdding(false)} isSuper={isSuper} />}
     </div>
   );
 }
 
-function AddUserDialog({ onClose }: { onClose: () => void }) {
+function AddUserDialog({ onClose, isSuper }: { onClose: () => void; isSuper: boolean }) {
   const qc = useQueryClient();
   const create = useServerFn(adminCreateUser);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [role, setRole] = useState<"admin" | "regional_manager" | "store_manager">("store_manager");
+  const [role, setRole] = useState<"super_admin" | "admin" | "regional_manager" | "store_manager">("store_manager");
   const [saving, setSaving] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
@@ -138,7 +142,8 @@ function AddUserDialog({ onClose }: { onClose: () => void }) {
             <Select value={role} onValueChange={(v) => setRole(v as any)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="admin">Admin</SelectItem>
+                {isSuper && <SelectItem value="super_admin">Super Admin</SelectItem>}
+                <SelectItem value="admin" disabled={!isSuper}>Admin{!isSuper ? " (super admin only)" : ""}</SelectItem>
                 <SelectItem value="regional_manager">Regional Manager</SelectItem>
                 <SelectItem value="store_manager">Store Manager</SelectItem>
               </SelectContent>
