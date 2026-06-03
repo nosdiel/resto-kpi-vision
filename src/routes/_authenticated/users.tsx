@@ -3,9 +3,11 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { listUsersWithRoles, setUserRole, setUserLocations, listLocations } from "@/lib/admin.functions";
+import { listUsersWithRoles, setUserRole, setUserLocations, listLocations, adminCreateUser } from "@/lib/admin.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -25,6 +27,7 @@ function UsersPage() {
   const qc = useQueryClient();
   const setRole = useServerFn(setUserRole);
   const [editingLocs, setEditingLocs] = useState<any | null>(null);
+  const [adding, setAdding] = useState(false);
 
   const changeRole = async (userId: string, role: any) => {
     try {
@@ -39,8 +42,13 @@ function UsersPage() {
   return (
     <div className="p-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Users & Roles</h1>
-        <p className="text-sm text-muted-foreground">Assign roles and location access.</p>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold">Users & Roles</h1>
+            <p className="text-sm text-muted-foreground">Assign roles and location access.</p>
+          </div>
+          <Button onClick={() => setAdding(true)}>Add user</Button>
+        </div>
       </div>
       <Card className="p-0 overflow-hidden">
         <Table>
@@ -80,7 +88,69 @@ function UsersPage() {
         </Table>
       </Card>
       {editingLocs && <LocationAccessDialog user={editingLocs} locations={locs ?? []} onClose={() => setEditingLocs(null)} />}
+      {adding && <AddUserDialog onClose={() => setAdding(false)} />}
     </div>
+  );
+}
+
+function AddUserDialog({ onClose }: { onClose: () => void }) {
+  const qc = useQueryClient();
+  const create = useServerFn(adminCreateUser);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [role, setRole] = useState<"admin" | "regional_manager" | "store_manager">("store_manager");
+  const [saving, setSaving] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await create({ data: { email, password, displayName: displayName || null, role } });
+      toast.success("User created");
+      qc.invalidateQueries({ queryKey: ["users-roles"] });
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create user");
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Add user</DialogTitle></DialogHeader>
+        <form onSubmit={submit} className="space-y-3">
+          <div>
+            <Label htmlFor="new-email">Email</Label>
+            <Input id="new-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          </div>
+          <div>
+            <Label htmlFor="new-name">Display name (optional)</Label>
+            <Input id="new-name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="new-password">Temporary password</Label>
+            <Input id="new-password" type="text" value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} required />
+            <p className="text-xs text-muted-foreground mt-1">Share this with the user; they can change it after signing in.</p>
+          </div>
+          <div>
+            <Label>Role</Label>
+            <Select value={role} onValueChange={(v) => setRole(v as any)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="regional_manager">Regional Manager</SelectItem>
+                <SelectItem value="store_manager">Store Manager</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+            <Button type="submit" disabled={saving}>{saving ? "Creating…" : "Create user"}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
