@@ -16,6 +16,7 @@ export const saveSquareConnection = createServerFn({ method: "POST" })
     squareLocationId: z.string().min(1).max(64),
     accessToken: z.string().min(10).max(2000),
     merchantId: z.string().max(64).optional().nullable(),
+    environment: z.enum(["production", "sandbox"]).default("production"),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
@@ -25,6 +26,7 @@ export const saveSquareConnection = createServerFn({ method: "POST" })
         square_location_id: data.squareLocationId,
         access_token: data.accessToken,
         merchant_id: data.merchantId ?? null,
+        environment: data.environment,
         created_by: context.userId,
       }, { onConflict: "location_id" });
     if (error) throw new Error(error.message);
@@ -36,7 +38,7 @@ export const listSquareConnections = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("square_connections")
-      .select("id, location_id, square_location_id, merchant_id, created_at, updated_at");
+      .select("id, location_id, square_location_id, merchant_id, environment, created_at, updated_at");
     if (error) throw new Error(error.message);
     return data ?? [];
   });
@@ -56,7 +58,7 @@ export const syncSquareLocation = createServerFn({ method: "POST" })
     if (connErr) throw new Error(connErr.message);
     if (!conn) throw new Error("No Square connection configured for this location.");
 
-    const env = process.env.SQUARE_ENV ?? "production";
+    const env = (conn as { environment?: string }).environment ?? process.env.SQUARE_ENV ?? "production";
     const base = env === "sandbox" ? "https://connect.squareupsandbox.com" : "https://connect.squareup.com";
 
     // Search orders for the location across the date range. (One request, paginated.)
