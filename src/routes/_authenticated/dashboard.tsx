@@ -34,17 +34,23 @@ function DashboardPage() {
   const target = data?.target;
   const targetPct = Number(target?.target_pct_over_ly ?? 0);
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   const computed = useMemo(() => {
     const dayRows = rows.map((d, i) => {
       const salesTarget = d.last_year_sales * (1 + targetPct / 100);
+      const date = new Date(d.business_date + "T00:00:00");
+      const isFuture = date > today;
       return {
         ...d,
         dayName: DAY_NAMES[i],
         salesTarget,
-        salesVariance: d.actual_sales - salesTarget,
+        salesVariance: isFuture ? undefined : d.actual_sales - salesTarget,
         lyAvgTicket: safeDiv(d.last_year_sales, d.last_year_customer_count),
         actualAvgTicket: safeDiv(d.actual_sales, d.actual_customer_count),
-        custVariance: d.actual_customer_count - d.last_year_customer_count,
+        custVariance: isFuture ? undefined : d.actual_customer_count - d.last_year_customer_count,
+        isFuture,
       };
     });
     const totals = dayRows.reduce(
@@ -52,10 +58,10 @@ function DashboardPage() {
         last_year_sales: a.last_year_sales + d.last_year_sales,
         salesTarget: a.salesTarget + d.salesTarget,
         actual_sales: a.actual_sales + d.actual_sales,
-        salesVariance: a.salesVariance + d.salesVariance,
+        salesVariance: a.salesVariance + (d.salesVariance ?? 0),
         last_year_customer_count: a.last_year_customer_count + d.last_year_customer_count,
         actual_customer_count: a.actual_customer_count + d.actual_customer_count,
-        custVariance: a.custVariance + d.custVariance,
+        custVariance: a.custVariance + (d.custVariance ?? 0),
         dessert_count: a.dessert_count + d.dessert_count,
       }),
       { last_year_sales: 0, salesTarget: 0, actual_sales: 0, salesVariance: 0, last_year_customer_count: 0, actual_customer_count: 0, custVariance: 0, dessert_count: 0 },
@@ -142,12 +148,12 @@ function DashboardPage() {
                   <td className="px-3 py-2 text-right">{fmtCurrency(d.last_year_sales)}</td>
                   <td className="px-3 py-2 text-right">{fmtCurrency(d.salesTarget)}</td>
                   <td className="px-3 py-2 text-right font-semibold">{fmtCurrency(d.actual_sales)}</td>
-                  <td className={`px-3 py-2 text-right font-medium ${d.salesVariance >= 0 ? "text-success" : "text-destructive"}`}>{fmtCurrency(d.salesVariance)}</td>
+                  <td className={`px-3 py-2 text-right font-medium ${d.salesVariance === undefined ? "" : d.salesVariance >= 0 ? "text-success" : "text-destructive"}`}>{d.salesVariance === undefined ? "—" : fmtCurrency(d.salesVariance)}</td>
                   <td className="px-3 py-2 text-right">{fmtCurrency(d.lyAvgTicket)}</td>
                   <td className="px-3 py-2 text-right">{fmtCurrency(d.actualAvgTicket)}</td>
                   <td className="px-3 py-2 text-right">{fmtInt(d.last_year_customer_count)}</td>
                   <td className="px-3 py-2 text-right">{fmtInt(d.actual_customer_count)}</td>
-                  <td className={`px-3 py-2 text-right font-medium ${d.custVariance >= 0 ? "text-success" : "text-destructive"}`}>{fmtInt(d.custVariance)}</td>
+                  <td className={`px-3 py-2 text-right font-medium ${d.custVariance === undefined ? "" : d.custVariance >= 0 ? "text-success" : "text-destructive"}`}>{d.custVariance === undefined ? "—" : fmtInt(d.custVariance)}</td>
                   <td className="px-3 py-2 text-right">{fmtInt(d.dessert_count)}</td>
                 </tr>
               ))}
