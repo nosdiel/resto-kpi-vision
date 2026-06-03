@@ -210,7 +210,7 @@ export const getQtrReport = createServerFn({ method: "POST" })
 
     const { data: locations, error: locErr } = await supabase
       .from("locations")
-      .select("id, name, active")
+      .select("id, name, active, region")
       .eq("active", true)
       .order("name");
     if (locErr) throw new Error(locErr.message);
