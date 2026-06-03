@@ -201,6 +201,44 @@ export type Database = {
         }
         Relationships: []
       }
+      pnl_vendors: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          location_id: string
+          name: string
+          section: string
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          location_id: string
+          name: string
+          section: string
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          location_id?: string
+          name?: string
+          section?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pnl_vendors_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -351,6 +389,59 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      weekly_pnl: {
+        Row: {
+          beer_wine_cost: number
+          created_at: string
+          fiscal_week: number
+          fiscal_year: number
+          id: string
+          location_id: string
+          notes: string | null
+          repairs: number
+          updated_at: string
+          updated_by: string | null
+          vendor_amounts: Json
+          wages: number
+        }
+        Insert: {
+          beer_wine_cost?: number
+          created_at?: string
+          fiscal_week: number
+          fiscal_year: number
+          id?: string
+          location_id: string
+          notes?: string | null
+          repairs?: number
+          updated_at?: string
+          updated_by?: string | null
+          vendor_amounts?: Json
+          wages?: number
+        }
+        Update: {
+          beer_wine_cost?: number
+          created_at?: string
+          fiscal_week?: number
+          fiscal_year?: number
+          id?: string
+          location_id?: string
+          notes?: string | null
+          repairs?: number
+          updated_at?: string
+          updated_by?: string | null
+          vendor_amounts?: Json
+          wages?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_pnl_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       weekly_targets: {
         Row: {
