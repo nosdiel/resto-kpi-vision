@@ -178,6 +178,7 @@ function WeeklyPnlCard({
   const [wages, setWages] = useState(week.wages);
   const [beerWineCost, setBeerWineCost] = useState(week.beerWineCost);
   const [repairs, setRepairs] = useState(week.repairs);
+  const [catering, setCatering] = useState(week.catering);
   const [vendorAmounts, setVendorAmounts] = useState<Record<string, number>>(week.vendorAmounts);
   const [newFood, setNewFood] = useState("");
   const [newPaper, setNewPaper] = useState("");
@@ -186,8 +187,9 @@ function WeeklyPnlCard({
     setWages(week.wages);
     setBeerWineCost(week.beerWineCost);
     setRepairs(week.repairs);
+    setCatering(week.catering);
     setVendorAmounts(week.vendorAmounts);
-  }, [week.wages, week.beerWineCost, week.repairs, week.vendorAmounts]);
+  }, [week.wages, week.beerWineCost, week.repairs, week.catering, week.vendorAmounts]);
 
   const foodVendors = vendors.filter((v) => v.section === "food_purchases");
   const paperVendors = vendors.filter((v) => v.section === "paper_supplies");
