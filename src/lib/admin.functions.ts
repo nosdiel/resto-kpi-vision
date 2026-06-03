@@ -85,6 +85,45 @@ export const setUserLocations = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/* ---------- Admin: create user ---------- */
+export const adminCreateUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({
+      email: z.string().email().max(255),
+      password: z.string().min(8).max(128),
+      displayName: z.string().min(1).max(120).optional().nullable(),
+      role: z.enum(["admin", "regional_manager", "store_manager"]),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase: callerSupabase, userId: callerId } = context;
+    // Guard: caller must be admin
+    const { data: callerRoles } = await callerSupabase
+      .from("user_roles").select("role").eq("user_id", callerId);
+    const isAdmin = (callerRoles ?? []).some((r) => r.role === "admin");
+    if (!isAdmin) throw new Error("Only admins can create users");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
+      email: data.email,
+      password: data.password,
+      email_confirm: true,
+      user_metadata: data.displayName ? { display_name: data.displayName } : undefined,
+    });
+    if (error) throw new Error(error.message);
+    const newId = created.user?.id;
+    if (!newId) throw new Error("User creation returned no id");
+
+    // handle_new_user trigger inserts default role; override to requested role
+    await supabaseAdmin.from("user_roles").delete().eq("user_id", newId);
+    const { error: roleErr } = await supabaseAdmin
+      .from("user_roles").insert({ user_id: newId, role: data.role });
+    if (roleErr) throw new Error(roleErr.message);
+
+    return { ok: true, userId: newId };
+  });
+
 /* ---------- Current user (roles) ---------- */
 export const getMe = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
