@@ -101,7 +101,7 @@ async function validateSquareConnection({
       body: JSON.stringify({ location_ids: [checkLocationId], limit: 1 }),
     }),
     checkSquarePermission("PAYMENTS_READ", environment, accessToken, "/v2/payments?limit=1"),
-    checkSquarePermission("ITEMS_READ", environment, accessToken, "/v2/catalog/list?types=ITEM&limit=1"),
+    checkSquarePermission("ITEMS_READ", environment, accessToken, "/v2/catalog/list?types=ITEM"),
   ]);
 
   const missingPermissions = permissionChecks
