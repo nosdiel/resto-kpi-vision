@@ -248,6 +248,13 @@ export const getQtrReport = createServerFn({ method: "POST" })
       allDates.push(...ds);
     }
 
+    // Prior-week dates (LY fallback, matches Daily Sales behavior)
+    const prevDates = allDates.map((d) => {
+      const dt = new Date(d + "T00:00:00Z");
+      dt.setUTCDate(dt.getUTCDate() - 7);
+      return dt.toISOString().slice(0, 10);
+    });
+
     const [
       { data: vendors, error: vErr },
       { data: sales, error: sErr },
@@ -261,9 +268,9 @@ export const getQtrReport = createServerFn({ method: "POST" })
         .eq("active", true),
       supabase
         .from("daily_sales")
-        .select("business_date, actual_sales, last_year_sales")
+        .select("business_date, actual_sales, last_year_sales, last_year_customer_count")
         .eq("location_id", locationId)
-        .in("business_date", allDates),
+        .in("business_date", [...allDates, ...prevDates]),
       supabase
         .from("weekly_pnl")
         .select("fiscal_week, wages, beer_wine_cost, vendor_amounts")
@@ -296,11 +303,12 @@ export const getQtrReport = createServerFn({ method: "POST" })
       (vendors ?? []).filter((v) => v.section === "paper_supplies").map((v) => v.id),
     );
 
-    const salesByDate = new Map<string, { actual: number; ly: number }>();
+    const salesByDate = new Map<string, { actual: number; ly: number; lyCust: number }>();
     for (const s of sales ?? []) {
       salesByDate.set(s.business_date, {
         actual: Number(s.actual_sales) || 0,
         ly: Number(s.last_year_sales) || 0,
+        lyCust: Number(s.last_year_customer_count) || 0,
       });
     }
     const pnlByWeek = new Map<number, { wages: number; beer: number; vendors: Record<string, number> }>();
@@ -323,6 +331,15 @@ export const getQtrReport = createServerFn({ method: "POST" })
       for (const d of dates) {
         const s = salesByDate.get(d);
         if (s) { actualSales += s.actual; lySales += s.ly; }
+        // Fallback: if both LY sales and LY customers are 0, use prior-week actuals (matches Daily Sales)
+        const useFallback = !s || (s.ly === 0 && s.lyCust === 0);
+        if (useFallback) {
+          const prev = new Date(d + "T00:00:00Z");
+          prev.setUTCDate(prev.getUTCDate() - 7);
+          const pk = prev.toISOString().slice(0, 10);
+          const p = salesByDate.get(pk);
+          if (p) lySales += p.actual - (s?.ly ?? 0);
+        }
       }
       const pctOverLy = targetByWeek.get(w) ?? 0;
       const salesGoal = lySales * (1 + pctOverLy / 100);
