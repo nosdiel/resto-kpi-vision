@@ -16,9 +16,11 @@ import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedToastRouteImport } from './routes/_authenticated/toast'
 import { Route as AuthenticatedTargetsRouteImport } from './routes/_authenticated/targets'
 import { Route as AuthenticatedSquareRouteImport } from './routes/_authenticated/square'
+import { Route as AuthenticatedPnlRouteImport } from './routes/_authenticated/pnl'
 import { Route as AuthenticatedLocationsRouteImport } from './routes/_authenticated/locations'
 import { Route as AuthenticatedDessertsRouteImport } from './routes/_authenticated/desserts'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedPnlQuarterRouteImport } from './routes/_authenticated/pnl.$quarter'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -54,6 +56,11 @@ const AuthenticatedSquareRoute = AuthenticatedSquareRouteImport.update({
   path: '/square',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPnlRoute = AuthenticatedPnlRouteImport.update({
+  id: '/pnl',
+  path: '/pnl',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedLocationsRoute = AuthenticatedLocationsRouteImport.update({
   id: '/locations',
   path: '/locations',
@@ -69,6 +76,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPnlQuarterRoute = AuthenticatedPnlQuarterRouteImport.update({
+  id: '/$quarter',
+  path: '/$quarter',
+  getParentRoute: () => AuthenticatedPnlRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -76,10 +88,12 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/desserts': typeof AuthenticatedDessertsRoute
   '/locations': typeof AuthenticatedLocationsRoute
+  '/pnl': typeof AuthenticatedPnlRouteWithChildren
   '/square': typeof AuthenticatedSquareRoute
   '/targets': typeof AuthenticatedTargetsRoute
   '/toast': typeof AuthenticatedToastRoute
   '/users': typeof AuthenticatedUsersRoute
+  '/pnl/$quarter': typeof AuthenticatedPnlQuarterRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -87,10 +101,12 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/desserts': typeof AuthenticatedDessertsRoute
   '/locations': typeof AuthenticatedLocationsRoute
+  '/pnl': typeof AuthenticatedPnlRouteWithChildren
   '/square': typeof AuthenticatedSquareRoute
   '/targets': typeof AuthenticatedTargetsRoute
   '/toast': typeof AuthenticatedToastRoute
   '/users': typeof AuthenticatedUsersRoute
+  '/pnl/$quarter': typeof AuthenticatedPnlQuarterRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -100,10 +116,12 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/desserts': typeof AuthenticatedDessertsRoute
   '/_authenticated/locations': typeof AuthenticatedLocationsRoute
+  '/_authenticated/pnl': typeof AuthenticatedPnlRouteWithChildren
   '/_authenticated/square': typeof AuthenticatedSquareRoute
   '/_authenticated/targets': typeof AuthenticatedTargetsRoute
   '/_authenticated/toast': typeof AuthenticatedToastRoute
   '/_authenticated/users': typeof AuthenticatedUsersRoute
+  '/_authenticated/pnl/$quarter': typeof AuthenticatedPnlQuarterRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -113,10 +131,12 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/desserts'
     | '/locations'
+    | '/pnl'
     | '/square'
     | '/targets'
     | '/toast'
     | '/users'
+    | '/pnl/$quarter'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -124,10 +144,12 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/desserts'
     | '/locations'
+    | '/pnl'
     | '/square'
     | '/targets'
     | '/toast'
     | '/users'
+    | '/pnl/$quarter'
   id:
     | '__root__'
     | '/'
@@ -136,10 +158,12 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/desserts'
     | '/_authenticated/locations'
+    | '/_authenticated/pnl'
     | '/_authenticated/square'
     | '/_authenticated/targets'
     | '/_authenticated/toast'
     | '/_authenticated/users'
+    | '/_authenticated/pnl/$quarter'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -199,6 +223,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSquareRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/pnl': {
+      id: '/_authenticated/pnl'
+      path: '/pnl'
+      fullPath: '/pnl'
+      preLoaderRoute: typeof AuthenticatedPnlRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/locations': {
       id: '/_authenticated/locations'
       path: '/locations'
@@ -220,13 +251,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/pnl/$quarter': {
+      id: '/_authenticated/pnl/$quarter'
+      path: '/$quarter'
+      fullPath: '/pnl/$quarter'
+      preLoaderRoute: typeof AuthenticatedPnlQuarterRouteImport
+      parentRoute: typeof AuthenticatedPnlRoute
+    }
   }
 }
+
+interface AuthenticatedPnlRouteChildren {
+  AuthenticatedPnlQuarterRoute: typeof AuthenticatedPnlQuarterRoute
+}
+
+const AuthenticatedPnlRouteChildren: AuthenticatedPnlRouteChildren = {
+  AuthenticatedPnlQuarterRoute: AuthenticatedPnlQuarterRoute,
+}
+
+const AuthenticatedPnlRouteWithChildren =
+  AuthenticatedPnlRoute._addFileChildren(AuthenticatedPnlRouteChildren)
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDessertsRoute: typeof AuthenticatedDessertsRoute
   AuthenticatedLocationsRoute: typeof AuthenticatedLocationsRoute
+  AuthenticatedPnlRoute: typeof AuthenticatedPnlRouteWithChildren
   AuthenticatedSquareRoute: typeof AuthenticatedSquareRoute
   AuthenticatedTargetsRoute: typeof AuthenticatedTargetsRoute
   AuthenticatedToastRoute: typeof AuthenticatedToastRoute
@@ -237,6 +287,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDessertsRoute: AuthenticatedDessertsRoute,
   AuthenticatedLocationsRoute: AuthenticatedLocationsRoute,
+  AuthenticatedPnlRoute: AuthenticatedPnlRouteWithChildren,
   AuthenticatedSquareRoute: AuthenticatedSquareRoute,
   AuthenticatedTargetsRoute: AuthenticatedTargetsRoute,
   AuthenticatedToastRoute: AuthenticatedToastRoute,
