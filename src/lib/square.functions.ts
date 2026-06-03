@@ -123,17 +123,50 @@ export const testSquareConnection = createServerFn({ method: "POST" })
   }).parse(d))
   .handler(async ({ data }) => validateSquareConnection(data));
 
+export const getSquareConnectionLocations = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    locationId: z.string().uuid(),
+  }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: conn, error } = await supabaseAdmin
+      .from("square_connections")
+      .select("access_token, square_location_id, environment")
+      .eq("location_id", data.locationId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!conn?.access_token) return { ok: false, merchantId: null, locations: [], missingPermissions: [...requiredPermissions], error: SQUARE_CONNECTION_ERROR };
+
+    return validateSquareConnection({
+      accessToken: conn.access_token,
+      environment: conn.environment === "sandbox" ? "sandbox" : "production",
+      selectedLocationId: conn.square_location_id,
+    });
+  });
+
 export const saveSquareConnection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({
     locationId: z.string().uuid(),
     squareLocationId: z.string().min(1).max(64),
-    accessToken: z.string().min(10).max(2000),
+    accessToken: z.string().min(10).max(2000).optional(),
     environment: z.enum(["production", "sandbox"]).default("production"),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: existing, error: existingError } = await supabaseAdmin
+      .from("square_connections")
+      .select("access_token")
+      .eq("location_id", data.locationId)
+      .maybeSingle();
+    if (existingError) throw new Error(existingError.message);
+
+    const accessToken = data.accessToken ?? existing?.access_token;
+    if (!accessToken) return { ok: false, merchantId: null, locations: [], missingPermissions: [...requiredPermissions], error: SQUARE_CONNECTION_ERROR };
+
     const validation = await validateSquareConnection({
-      accessToken: data.accessToken,
+      accessToken,
       environment: data.environment,
       selectedLocationId: data.squareLocationId,
     });
@@ -146,7 +179,7 @@ export const saveSquareConnection = createServerFn({ method: "POST" })
       .upsert({
         location_id: data.locationId,
         square_location_id: data.squareLocationId,
-        access_token: data.accessToken,
+        access_token: accessToken,
         merchant_id: squareLocation?.merchantId ?? validation.merchantId,
         environment: data.environment,
         created_by: context.userId,
