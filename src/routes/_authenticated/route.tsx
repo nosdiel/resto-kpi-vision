@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, redirect, Link, useRouter } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { LayoutDashboard, MapPin, Target, IceCream, Plug, Utensils, Users, LogOut, Receipt, Shield, Menu, X } from "lucide-react";
+import { LayoutDashboard, MapPin, Target, IceCream, Plug, Utensils, Users, LogOut, Receipt, Shield, Menu, X, Calculator } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -41,6 +41,7 @@ function AuthedLayout() {
   const allItems = [
     { key: "dashboard", to: "/dashboard", label: "Daily Sales", icon: LayoutDashboard },
     { key: "pnl", to: "/pnl", label: "Weekly PNL", icon: Receipt },
+    { key: "pnl_bonus", to: "/pnl-bonus", label: "Bonus Calculator", icon: Calculator },
     { key: "targets", to: "/targets", label: "Targets", icon: Target },
     { key: "locations", to: "/locations", label: "Locations", icon: MapPin },
     { key: "desserts", to: "/desserts", label: "Dessert of Month", icon: IceCream },
