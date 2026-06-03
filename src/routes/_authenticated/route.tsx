@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, redirect, Link, useRouter } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { LayoutDashboard, MapPin, Target, IceCream, Plug, Utensils, Users, LogOut, Receipt, Shield, Menu, X, Calculator } from "lucide-react";
+import { LayoutDashboard, MapPin, Target, IceCream, Plug, Utensils, Users, LogOut, Receipt, Shield, Menu, X, Calculator, Phone } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -49,6 +49,7 @@ function AuthedLayout() {
     { key: "toast", to: "/toast", label: "Toast Sync", icon: Utensils },
     { key: "users", to: "/users", label: "Users", icon: Users },
     { key: "permissions", to: "/permissions", label: "Role Permissions", icon: Shield },
+    { key: "who_to_call", to: "/who-to-call", label: "Who To Call", icon: Phone },
   ];
   const items = allItems.filter((it) => allowed.has(it.key));
   return (

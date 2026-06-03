@@ -12,7 +12,8 @@ export type PermissionKey =
   | "square"
   | "toast"
   | "users"
-  | "permissions";
+  | "permissions"
+  | "who_to_call";
 
 export const ALL_PERMISSIONS: { key: PermissionKey; label: string }[] = [
   { key: "dashboard", label: "Daily Sales" },
@@ -25,13 +26,14 @@ export const ALL_PERMISSIONS: { key: PermissionKey; label: string }[] = [
   { key: "toast", label: "Toast Sync" },
   { key: "users", label: "Users" },
   { key: "permissions", label: "Role Permissions" },
+  { key: "who_to_call", label: "Who To Call" },
 ];
 
 export const MANAGED_ROLES = ["admin", "regional_manager", "store_manager"] as const;
 
 const RoleEnum = z.enum(["super_admin", "admin", "regional_manager", "store_manager"]);
 const PermEnum = z.enum([
-  "dashboard","pnl","pnl_bonus","targets","locations","desserts","square","toast","users","permissions",
+  "dashboard","pnl","pnl_bonus","targets","locations","desserts","square","toast","users","permissions","who_to_call",
 ]);
 
 export const listRolePermissions = createServerFn({ method: "GET" })
