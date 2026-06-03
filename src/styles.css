@@ -162,3 +162,17 @@
     color: var(--color-foreground);
   }
 }
+
+@media print {
+  @page { size: landscape; margin: 0.4in; }
+  [data-sidebar="sidebar"],
+  [data-slot="sidebar-container"],
+  [data-slot="sidebar-gap"],
+  [data-sidebar="trigger"],
+  header.print\:hidden,
+  .print\:hidden { display: none !important; }
+  html, body { background: white !important; }
+  body * { color: black !important; box-shadow: none !important; }
+  .overflow-x-auto, .overflow-hidden { overflow: visible !important; }
+  table { width: 100% !important; font-size: 10px !important; page-break-inside: avoid; }
+}
