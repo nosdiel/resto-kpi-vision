@@ -148,6 +148,7 @@ type WeekRow = {
   wages: number;
   beerWineCost: number;
   repairs: number;
+  catering: number;
   vendorAmounts: Record<string, number>;
   notes: string | null;
   hasEntry: boolean;
