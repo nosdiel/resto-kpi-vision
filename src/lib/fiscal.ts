@@ -67,4 +67,27 @@ export function defaultFyStart(year: number): string {
   return jan1.toISOString().slice(0, 10);
 }
 
+/** Given a FY start date (Sunday), return the 1-indexed fiscal week containing `today`. Clamped to 1..52. */
+export function fiscalWeekForDate(fyStartDate: string, today: Date = new Date()): number {
+  const [y, m, d] = fyStartDate.split("-").map(Number);
+  const start = Date.UTC(y, m - 1, d);
+  const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  const diffDays = Math.floor((todayUtc - start) / 86400000);
+  if (diffDays < 0) return 1;
+  return Math.min(52, Math.floor(diffDays / 7) + 1);
+}
+
+/** Best-guess current fiscal year + week using the standard default FY start (first Sunday >= Jan 1). */
+export function currentFiscalYearWeek(today: Date = new Date()): { fiscalYear: number; fiscalWeek: number } {
+  const year = today.getUTCFullYear();
+  const thisStart = defaultFyStart(year);
+  const [ty, tm, td] = thisStart.split("-").map(Number);
+  const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  if (todayUtc < Date.UTC(ty, tm - 1, td)) {
+    const prev = year - 1;
+    return { fiscalYear: prev, fiscalWeek: fiscalWeekForDate(defaultFyStart(prev), today) };
+  }
+  return { fiscalYear: year, fiscalWeek: fiscalWeekForDate(thisStart, today) };
+}
+
 export const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
