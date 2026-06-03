@@ -56,10 +56,29 @@ export const syncToastLocation = createServerFn({ method: "POST" })
       endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     }).parse(d),
   )
+  .handler(async ({ data }) => runToastSync(data.locationId, data.startDate, data.endDate));
+
+export const backfillToastFiscalPeriods = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ locationId: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: fy, error: fyErr } = await supabaseAdmin
+      .from("fiscal_year_settings")
+      .select("start_date")
+      .order("start_date", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (fyErr) throw new Error(fyErr.message);
+    const today = new Date().toISOString().slice(0, 10);
+    const start = fy?.start_date ?? new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10);
+    return runToastSync(data.locationId, start, today);
+  });
+
+async function runToastSync(locationId: string, startDate: string, endDate: string) {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: conn, error: connErr } = await supabaseAdmin
-      .from("toast_connections").select("*").eq("location_id", data.locationId).maybeSingle();
+      .from("toast_connections").select("*").eq("location_id", locationId).maybeSingle();
     if (connErr) throw new Error(connErr.message);
     if (!conn) throw new Error("No Toast connection configured for this location.");
 
@@ -87,8 +106,8 @@ export const syncToastLocation = createServerFn({ method: "POST" })
     if (!accessToken) throw new Error("Toast auth: no access token returned");
 
     // 2. Pull orders day-by-day (Toast ordersBulk caps at one businessDate)
-    const start = new Date(`${data.startDate}T00:00:00Z`);
-    const end = new Date(`${data.endDate}T00:00:00Z`);
+    const start = new Date(`${startDate}T00:00:00Z`);
+    const end = new Date(`${endDate}T00:00:00Z`);
     const ordersByDate: Record<string, { sales: number; count: number }> = {};
 
     for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
@@ -129,7 +148,7 @@ export const syncToastLocation = createServerFn({ method: "POST" })
     }
 
     const rows = Object.entries(ordersByDate).map(([date, agg]) => ({
-      location_id: data.locationId,
+      location_id: locationId,
       business_date: date,
       actual_sales: Number(agg.sales.toFixed(2)),
       actual_customer_count: agg.count,
@@ -143,4 +162,4 @@ export const syncToastLocation = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
     }
     return { ok: true, daysSynced: rows.length };
-  });
+}
