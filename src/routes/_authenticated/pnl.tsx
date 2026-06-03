@@ -262,7 +262,7 @@ function WeeklyPnlCard({
       <div className="p-4 space-y-4">
         <Section title="">
           <Row label="Food Sales (from daily sales)" amount={sales} bold />
-          <Row label="Catering" amount={0} muted />
+          <EditableRow label="Catering" value={catering} onChange={setCatering} pct={pct(catering)} />
           <RowTotal label="Total Sales" amount={sales} />
         </Section>
 
