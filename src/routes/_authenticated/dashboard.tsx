@@ -72,8 +72,7 @@ function DashboardPage() {
   }, [rows, targetPct]);
 
   const variancePct = computed.totals.salesTarget ? (computed.totals.salesVariance / computed.totals.salesTarget) * 100 : 0;
-  const avgTicketGoal = Number(target?.avg_ticket_goal ?? 0);
-  const avgTicketVariance = computed.actualAvgTicketTotal - avgTicketGoal;
+  const avgTicketVariance = computed.actualAvgTicketTotal - computed.lyAvgTicketTotal;
 
   const years = [currentYear - 1, currentYear, currentYear + 1];
   const weeksForPeriod = weeksInPeriod(period);
@@ -185,8 +184,8 @@ function DashboardPage() {
           sub={fmtPct(variancePct)}
         />
         <SummaryBox
-          primaryLabel="AVG GOAL"
-          primaryValue={fmtCurrency(avgTicketGoal)}
+          primaryLabel="LY AVG"
+          primaryValue={fmtCurrency(computed.lyAvgTicketTotal)}
           varianceLabel="VARIANCE"
           varianceValue={fmtCurrency(avgTicketVariance)}
           variancePositive={avgTicketVariance >= 0}
