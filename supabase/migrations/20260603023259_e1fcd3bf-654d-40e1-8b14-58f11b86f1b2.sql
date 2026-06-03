@@ -1,0 +1,1 @@
+ALTER TABLE public.square_connections ADD COLUMN IF NOT EXISTS environment text NOT NULL DEFAULT 'production' CHECK (environment IN ('production','sandbox'));

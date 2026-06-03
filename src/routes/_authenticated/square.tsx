@@ -110,13 +110,14 @@ function ConnectDialog({ locationId, initial, onClose }: { locationId: string; i
   const [sqLoc, setSqLoc] = useState(initial?.square_location_id ?? "");
   const [merchant, setMerchant] = useState(initial?.merchant_id ?? "");
   const [token, setToken] = useState("");
+  const [environment, setEnvironment] = useState<"production" | "sandbox">(initial?.environment ?? "production");
   const [saving, setSaving] = useState(false);
 
   const submit = async () => {
     if (!sqLoc.trim() || !token.trim()) return toast.error("Square Location ID and access token are required");
     setSaving(true);
     try {
-      await save({ data: { locationId, squareLocationId: sqLoc, accessToken: token, merchantId: merchant || null } });
+      await save({ data: { locationId, squareLocationId: sqLoc, accessToken: token, merchantId: merchant || null, environment } });
       toast.success("Connection saved");
       qc.invalidateQueries({ queryKey: ["square-conns"] });
       onClose();
@@ -132,6 +133,17 @@ function ConnectDialog({ locationId, initial, onClose }: { locationId: string; i
           <DialogTitle>{initial ? "Update Square connection" : "Connect Square"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
+          <div>
+            <Label>Environment</Label>
+            <Select value={environment} onValueChange={(v) => setEnvironment(v as "production" | "sandbox")}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="production">Production</SelectItem>
+                <SelectItem value="sandbox">Sandbox</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">Must match the token type. Sandbox tokens require Sandbox Location IDs.</p>
+          </div>
           <div><Label>Square Location ID</Label><Input value={sqLoc} onChange={(e) => setSqLoc(e.target.value)} placeholder="LXXXXXXXXXX" /></div>
           <div><Label>Merchant ID (optional)</Label><Input value={merchant} onChange={(e) => setMerchant(e.target.value)} /></div>
           <div>
