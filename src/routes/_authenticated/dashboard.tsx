@@ -96,7 +96,7 @@ function DashboardPage() {
         </div>
       </header>
 
-      <Card className="p-4 print:hidden">
+      <Card className="p-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Filter label="Location">
             <Select value={locationId ?? data?.locationId ?? ""} onValueChange={(v) => setLocationId(v)}>
