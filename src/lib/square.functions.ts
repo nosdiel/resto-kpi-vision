@@ -354,11 +354,14 @@ async function runSquareSync(locationId: string, startDate: string, endDate: str
         console.error("Square sync failed", { status: res.status, environment: env, locationId, squareLocationId: conn.square_location_id, response });
         return { ok: false, daysSynced: 0, error: res.status === 401 || res.status === 403 ? SQUARE_CONNECTION_ERROR : `Square API error ${res.status}: ${response}` };
       }
-      const json = (await res.json()) as { orders?: Array<{ closed_at?: string; total_money?: { amount?: number }; line_items?: Array<{ catalog_object_id?: string; quantity?: string }> }>; cursor?: string };
+      const json = (await res.json()) as { orders?: Array<{ closed_at?: string; total_money?: { amount?: number }; total_tax_money?: { amount?: number }; line_items?: Array<{ catalog_object_id?: string; quantity?: string }> }>; cursor?: string };
       for (const o of json.orders ?? []) {
         if (!o.closed_at) continue;
         const date = o.closed_at.slice(0, 10);
-        const sales = (o.total_money?.amount ?? 0) / 100;
+        // Net sales excluding taxes
+        const gross = (o.total_money?.amount ?? 0) / 100;
+        const tax = (o.total_tax_money?.amount ?? 0) / 100;
+        const sales = gross - tax;
         if (!ordersByDate[date]) ordersByDate[date] = { sales: 0, count: 0, dessertQty: 0 };
         ordersByDate[date].sales += sales;
         ordersByDate[date].count += 1;
