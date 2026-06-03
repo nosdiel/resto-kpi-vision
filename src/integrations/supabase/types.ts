@@ -272,6 +272,42 @@ export type Database = {
           },
         ]
       }
+      toast_connections: {
+        Row: {
+          client_id: string
+          client_secret: string
+          created_at: string
+          created_by: string | null
+          environment: string
+          id: string
+          location_id: string
+          toast_restaurant_guid: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          client_secret: string
+          created_at?: string
+          created_by?: string | null
+          environment?: string
+          id?: string
+          location_id: string
+          toast_restaurant_guid: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          client_secret?: string
+          created_at?: string
+          created_by?: string | null
+          environment?: string
+          id?: string
+          location_id?: string
+          toast_restaurant_guid?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_locations: {
         Row: {
           id: string
@@ -383,7 +419,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "regional_manager" | "store_manager"
-      sales_source: "square" | "manual"
+      sales_source: "square" | "manual" | "toast"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -512,7 +548,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "regional_manager", "store_manager"],
-      sales_source: ["square", "manual"],
+      sales_source: ["square", "manual", "toast"],
     },
   },
 } as const
