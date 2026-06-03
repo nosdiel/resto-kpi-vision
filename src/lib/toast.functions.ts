@@ -129,15 +129,16 @@ async function runToastSync(locationId: string, startDate: string, endDate: stri
         const orders = (await res.json()) as Array<{
           businessDate?: number;
           voided?: boolean;
-          checks?: Array<{ totalAmount?: number; voided?: boolean }>;
+          checks?: Array<{ totalAmount?: number; taxAmount?: number; voided?: boolean }>;
         }>;
         if (!Array.isArray(orders) || orders.length === 0) break;
         const isoDate = `${yyyymmdd.slice(0, 4)}-${yyyymmdd.slice(4, 6)}-${yyyymmdd.slice(6, 8)}`;
         for (const o of orders) {
           if (o.voided) continue;
+          // Net sales excluding taxes
           const total = (o.checks ?? [])
             .filter((c) => !c.voided)
-            .reduce((s, c) => s + (c.totalAmount ?? 0), 0);
+            .reduce((s, c) => s + ((c.totalAmount ?? 0) - (c.taxAmount ?? 0)), 0);
           if (!ordersByDate[isoDate]) ordersByDate[isoDate] = { sales: 0, count: 0 };
           ordersByDate[isoDate].sales += total;
           ordersByDate[isoDate].count += 1;
