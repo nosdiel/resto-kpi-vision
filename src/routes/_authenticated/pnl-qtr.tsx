@@ -37,14 +37,31 @@ function QtrPage() {
   const [region, setRegion] = useState<string>("__all__");
 
   const fetchData = useServerFn(getQtrReport);
+
+  // First load: fetch the location list (no aggregation needed yet).
+  const { data: bootstrap } = useQuery({
+    queryKey: ["pnl-qtr-bootstrap", fiscalYear, quarter],
+    queryFn: () => fetchData({ data: { locationId: null, fiscalYear, quarter } }),
+  });
+  const allLocations = (bootstrap?.locations ?? []) as { id: string; name: string; region?: string | null }[];
+
+  const regionLocationIds = region === "__all__"
+    ? null
+    : allLocations.filter((l) => (l.region ?? "") === region).map((l) => l.id);
+
   const { data, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ["pnl-qtr", locationId, fiscalYear, quarter],
-    queryFn: () => fetchData({ data: { locationId, fiscalYear, quarter } }),
+    queryKey: ["pnl-qtr", locationId, region, regionLocationIds?.join(","), fiscalYear, quarter],
+    queryFn: () =>
+      fetchData({
+        data: regionLocationIds && regionLocationIds.length > 0
+          ? { locationIds: regionLocationIds, fiscalYear, quarter }
+          : { locationId, fiscalYear, quarter },
+      }),
+    enabled: !!bootstrap,
   });
 
   const years = [currentYear - 1, currentYear, currentYear + 1];
 
-  const allLocations = (data?.locations ?? []) as { id: string; name: string; region?: string | null }[];
   const regions = Array.from(
     new Set(allLocations.map((l) => (l.region ?? "").trim()).filter(Boolean)),
   ).sort();
@@ -57,7 +74,9 @@ function QtrPage() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Quarter Report</h1>
           <p className="text-sm text-muted-foreground">
-            {data?.locations.find((l) => l.id === data.locationId)?.name ?? "—"} · FY{fiscalYear} · Q{quarter}
+            {region !== "__all__"
+              ? `Region: ${region} (${regionLocationIds?.length ?? 0} locations)`
+              : (allLocations.find((l) => l.id === data?.locationId)?.name ?? "—")} · FY{fiscalYear} · Q{quarter}
             {data?.startWeek ? ` · Weeks ${data.startWeek}–${data.endWeek}` : ""}
           </p>
         </div>
@@ -93,7 +112,11 @@ function QtrPage() {
             </Select>
           </Filter>
           <Filter label="Location">
-            <Select value={locationId ?? data?.locationId ?? ""} onValueChange={(v) => setLocationId(v)}>
+            <Select
+              value={region === "__all__" ? (locationId ?? data?.locationId ?? "") : ""}
+              onValueChange={(v) => setLocationId(v)}
+              disabled={region !== "__all__"}
+            >
               <SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger>
               <SelectContent>
                 {filteredLocations.map((l) => (
