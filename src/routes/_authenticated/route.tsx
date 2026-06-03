@@ -1,6 +1,9 @@
 import { createFileRoute, Outlet, redirect, Link, useRouter } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { LayoutDashboard, MapPin, Target, IceCream, Plug, Utensils, Users, LogOut, Receipt } from "lucide-react";
+import { LayoutDashboard, MapPin, Target, IceCream, Plug, Utensils, Users, LogOut, Receipt, Shield } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
+import { getMyPermissions } from "@/lib/permissions.functions";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -18,16 +21,21 @@ function AuthedLayout() {
     await supabase.auth.signOut();
     router.navigate({ to: "/auth" });
   };
-  const items = [
-    { to: "/dashboard", label: "Daily Sales", icon: LayoutDashboard },
-    { to: "/pnl", label: "Weekly PNL", icon: Receipt },
-    { to: "/targets", label: "Targets", icon: Target },
-    { to: "/locations", label: "Locations", icon: MapPin },
-    { to: "/desserts", label: "Dessert of Month", icon: IceCream },
-    { to: "/square", label: "Square Sync", icon: Plug },
-    { to: "/toast", label: "Toast Sync", icon: Utensils },
-    { to: "/users", label: "Users", icon: Users },
+  const fetchPerms = useServerFn(getMyPermissions);
+  const { data: me } = useQuery({ queryKey: ["my-permissions"], queryFn: () => fetchPerms() });
+  const allowed = new Set(me?.permissions ?? []);
+  const allItems = [
+    { key: "dashboard", to: "/dashboard", label: "Daily Sales", icon: LayoutDashboard },
+    { key: "pnl", to: "/pnl", label: "Weekly PNL", icon: Receipt },
+    { key: "targets", to: "/targets", label: "Targets", icon: Target },
+    { key: "locations", to: "/locations", label: "Locations", icon: MapPin },
+    { key: "desserts", to: "/desserts", label: "Dessert of Month", icon: IceCream },
+    { key: "square", to: "/square", label: "Square Sync", icon: Plug },
+    { key: "toast", to: "/toast", label: "Toast Sync", icon: Utensils },
+    { key: "users", to: "/users", label: "Users", icon: Users },
+    { key: "permissions", to: "/permissions", label: "Role Permissions", icon: Shield },
   ];
+  const items = allItems.filter((it) => allowed.has(it.key));
   return (
     <div className="flex min-h-screen bg-background">
       <aside className="w-60 shrink-0 bg-sidebar text-sidebar-foreground flex flex-col">
