@@ -34,8 +34,12 @@ function SquarePage() {
   const runSync = async (locationId: string) => {
     try {
       toast.info("Syncing…");
-      await sync({ data: { locationId, startDate: weekAgo, endDate: today } });
-      toast.success("Sync complete");
+      const result = await sync({ data: { locationId, startDate: weekAgo, endDate: today } });
+      if (!result.ok) {
+        toast.error(result.error ?? "Square sync failed");
+        return;
+      }
+      toast.success(`Sync complete: ${result.daysSynced} day${result.daysSynced === 1 ? "" : "s"} updated`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Sync failed");
     }
@@ -149,7 +153,7 @@ function ConnectDialog({ locationId, initial, onClose }: { locationId: string; i
           <div>
             <Label>Access Token</Label>
             <Input type="password" value={token} onChange={(e) => setToken(e.target.value)} placeholder={initial ? "Leave blank to keep existing" : "EAAA..."} />
-            <p className="text-xs text-muted-foreground mt-1">Get from Square Developer Dashboard → Production Access Token.</p>
+            <p className="text-xs text-muted-foreground mt-1">Use a token from the selected environment with ORDERS_READ permission.</p>
           </div>
         </div>
         <DialogFooter>
