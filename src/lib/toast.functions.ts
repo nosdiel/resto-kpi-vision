@@ -37,7 +37,7 @@ export const saveToastConnection = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const listToastConnections = createServerFn({ method: "GET" })
+export const listToastConnections = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase

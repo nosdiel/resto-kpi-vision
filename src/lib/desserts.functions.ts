@@ -4,7 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
-export const listDesserts = createServerFn({ method: "GET" })
+export const listDesserts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase

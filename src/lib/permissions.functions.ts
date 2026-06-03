@@ -36,7 +36,7 @@ const PermEnum = z.enum([
   "dashboard","pnl","pnl_bonus","targets","locations","desserts","square","toast","users","permissions","who_to_call",
 ]);
 
-export const listRolePermissions = createServerFn({ method: "GET" })
+export const listRolePermissions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
@@ -80,7 +80,7 @@ export const setRolePermission = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const getMyPermissions = createServerFn({ method: "GET" })
+export const getMyPermissions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;

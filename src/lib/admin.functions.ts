@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /* ---------- Locations ---------- */
-export const listLocations = createServerFn({ method: "GET" })
+export const listLocations = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
@@ -35,7 +35,7 @@ export const upsertLocation = createServerFn({ method: "POST" })
   });
 
 /* ---------- Users & Roles ---------- */
-export const listUsersWithRoles = createServerFn({ method: "GET" })
+export const listUsersWithRoles = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async () => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -136,7 +136,7 @@ export const adminCreateUser = createServerFn({ method: "POST" })
   });
 
 /* ---------- Current user (roles) ---------- */
-export const getMe = createServerFn({ method: "GET" })
+export const getMe = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
