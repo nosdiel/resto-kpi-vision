@@ -351,7 +351,7 @@ export const getQtrReport = createServerFn({ method: "POST" })
         if (foodVendorIds.has(vid)) foodActualOther += a;
         else if (paperVendorIds.has(vid)) paperActual += a;
       }
-      const foodActual = foodActualOther + cateringActual + beer;
+      const foodActual = foodActualOther;
 
       return {
         week: w,
