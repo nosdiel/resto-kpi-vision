@@ -267,7 +267,7 @@ function WeeklyPnlCard({
           <RowTotal label="Total Payroll 20%" amount={wages} pct={pct(wages)} />
         </Section>
 
-        <Section title="Food Purchases">
+        <Section title="Food Cost - Goal 33%">
           {foodVendors.map((v) => (
             <EditableRow
               key={v.id}
@@ -284,7 +284,7 @@ function WeeklyPnlCard({
             onChange={setNewFood}
             onAdd={() => newFood.trim() && addVendorMut.mutate({ section: "food_purchases", name: newFood.trim() })}
           />
-          <RowTotal label="Food Purchases 35%" amount={foodTotal} pct={pct(foodTotal)} />
+          <RowTotal label="Food Cost - Goal 33%" amount={foodTotal} pct={pct(foodTotal)} />
         </Section>
 
         <RowTotal label="Total Cost of Goods" amount={totalCostOfGoods} pct={pct(totalCostOfGoods)} />
