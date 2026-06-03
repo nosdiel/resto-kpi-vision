@@ -297,11 +297,6 @@ export const getQtrReport = createServerFn({ method: "POST" })
     const foodVendorIds = new Set(
       (vendors ?? []).filter((v) => v.section === "food_purchases").map((v) => v.id),
     );
-    const cateringVendorIds = new Set(
-      (vendors ?? [])
-        .filter((v) => v.section === "food_purchases" && isCateringVendor(v.name))
-        .map((v) => v.id),
-    );
     const paperVendorIds = new Set(
       (vendors ?? []).filter((v) => v.section === "paper_supplies").map((v) => v.id),
     );
@@ -314,11 +309,12 @@ export const getQtrReport = createServerFn({ method: "POST" })
         lyCust: Number(s.last_year_customer_count) || 0,
       });
     }
-    const pnlByWeek = new Map<number, { wages: number; beer: number; vendors: Record<string, number> }>();
+    const pnlByWeek = new Map<number, { wages: number; beer: number; catering: number; vendors: Record<string, number> }>();
     for (const p of pnls ?? []) {
       pnlByWeek.set(p.fiscal_week, {
         wages: Number(p.wages) || 0,
         beer: Number(p.beer_wine_cost) || 0,
+        catering: Number(p.catering) || 0,
         vendors: (p.vendor_amounts ?? {}) as Record<string, number>,
       });
     }
@@ -349,15 +345,14 @@ export const getQtrReport = createServerFn({ method: "POST" })
       const pnl = pnlByWeek.get(w);
       const wages = pnl?.wages ?? 0;
       const beer = pnl?.beer ?? 0;
+      const cateringActual = pnl?.catering ?? 0;
       const vendorAmts = pnl?.vendors ?? {};
 
-      let cateringActual = 0;
       let foodActualOther = 0;
       let paperActual = 0;
       for (const [vid, amt] of Object.entries(vendorAmts)) {
         const a = Number(amt) || 0;
-        if (cateringVendorIds.has(vid)) cateringActual += a;
-        else if (foodVendorIds.has(vid)) foodActualOther += a;
+        if (foodVendorIds.has(vid)) foodActualOther += a;
         else if (paperVendorIds.has(vid)) paperActual += a;
       }
       const foodActual = foodActualOther + cateringActual + beer;
