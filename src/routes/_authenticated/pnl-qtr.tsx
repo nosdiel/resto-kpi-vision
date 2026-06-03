@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getQtrReport } from "@/lib/pnl.functions";
 import { currentFiscalYearWeek } from "@/lib/fiscal";
 import { fmtCurrency } from "@/lib/format";
+import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,13 +36,32 @@ function QtrPage() {
   const [quarter, setQuarter] = useState(defaultQuarter);
   const [locationId, setLocationId] = useState<string | null>(null);
   const [region, setRegion] = useState<string>("__all__");
+  const [authToken, setAuthToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (active) setAuthToken(data.session?.access_token ?? null);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthToken(session?.access_token ?? null);
+    });
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const fetchData = useServerFn(getQtrReport);
 
   // First load: fetch the location list (no aggregation needed yet).
   const { data: bootstrap } = useQuery({
     queryKey: ["pnl-qtr-bootstrap", fiscalYear, quarter],
-    queryFn: () => fetchData({ data: { locationId: null, fiscalYear, quarter } }),
+    queryFn: () => fetchData({
+      data: { locationId: null, fiscalYear, quarter },
+      headers: { Authorization: `Bearer ${authToken}` },
+    }),
+    enabled: !!authToken,
   });
   const allLocations = (bootstrap?.locations ?? []) as { id: string; name: string; region?: string | null }[];
 
@@ -56,8 +76,9 @@ function QtrPage() {
         data: regionLocationIds && regionLocationIds.length > 0
           ? { locationIds: regionLocationIds, fiscalYear, quarter }
           : { locationId, fiscalYear, quarter },
+        headers: { Authorization: `Bearer ${authToken}` },
       }),
-    enabled: !!bootstrap,
+    enabled: !!bootstrap && !!authToken,
   });
 
   const years = [currentYear - 1, currentYear, currentYear + 1];
