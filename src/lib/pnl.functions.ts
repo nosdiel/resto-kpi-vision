@@ -201,6 +201,7 @@ export const getQtrReport = createServerFn({ method: "POST" })
   .inputValidator((d) =>
     z.object({
       locationId: z.string().uuid().nullable().optional(),
+      locationIds: z.array(z.string().uuid()).optional(),
       fiscalYear: z.number().int().min(2000).max(2100),
       quarter: z.number().int().min(1).max(4),
     }).parse(d),
@@ -215,8 +216,11 @@ export const getQtrReport = createServerFn({ method: "POST" })
       .order("name");
     if (locErr) throw new Error(locErr.message);
 
-    const locationId = data.locationId || locations?.[0]?.id || null;
-    if (!locationId) {
+    const locationIds: string[] = (data.locationIds && data.locationIds.length > 0)
+      ? data.locationIds
+      : (data.locationId ? [data.locationId] : (locations?.[0]?.id ? [locations[0].id] : []));
+    const locationId = locationIds[0] ?? null;
+    if (locationIds.length === 0) {
       return { locations: locations ?? [], locationId: null, rows: [], periods: [] };
     }
 
