@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { LayoutDashboard, MapPin, Target, IceCream, Plug, Utensils, Users, LogOut, Receipt, Shield, Menu, X } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { getMyPermissions } from "@/lib/permissions.functions";
 
 export const Route = createFileRoute("/_authenticated")({
