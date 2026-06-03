@@ -38,12 +38,19 @@ export const getDashboard = createServerFn({ method: "POST" })
 
     const dates = weekDates(fyStart, data.fiscalWeek);
 
-    // 3. Daily sales for those 7 dates
+    // Previous week dates (fallback when LY data is missing, e.g. new stores)
+    const prevDates = dates.map((d) => {
+      const dt = new Date(d + "T00:00:00Z");
+      dt.setUTCDate(dt.getUTCDate() - 7);
+      return dt.toISOString().slice(0, 10);
+    });
+
+    // 3. Daily sales for those 7 dates + prior week
     const { data: sales, error: salesErr } = await supabase
       .from("daily_sales")
       .select("*")
       .eq("location_id", locationId)
-      .in("business_date", dates);
+      .in("business_date", [...dates, ...prevDates]);
     if (salesErr) throw new Error(salesErr.message);
 
     // 4. Target for this week
@@ -57,14 +64,19 @@ export const getDashboard = createServerFn({ method: "POST" })
 
     // 5. Build day-rows in order
     const salesByDate = new Map((sales ?? []).map((s) => [s.business_date, s]));
-    const days = dates.map((d) => {
+    const days = dates.map((d, i) => {
       const row = salesByDate.get(d);
+      const prev = salesByDate.get(prevDates[i]);
+      const lySales = Number(row?.last_year_sales ?? 0);
+      const lyCust = row?.last_year_customer_count ?? 0;
+      const useFallback = lySales === 0 && lyCust === 0;
       return {
         business_date: d,
         actual_sales: Number(row?.actual_sales ?? 0),
         actual_customer_count: row?.actual_customer_count ?? 0,
-        last_year_sales: Number(row?.last_year_sales ?? 0),
-        last_year_customer_count: row?.last_year_customer_count ?? 0,
+        last_year_sales: useFallback ? Number(prev?.actual_sales ?? 0) : lySales,
+        last_year_customer_count: useFallback ? (prev?.actual_customer_count ?? 0) : lyCust,
+        last_year_fallback: useFallback && !!prev,
         dessert_count: row?.dessert_count ?? 0,
         source: row?.source ?? "manual",
         has_override: !!row?.overridden_at,
