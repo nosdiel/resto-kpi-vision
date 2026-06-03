@@ -193,7 +193,7 @@ function WeeklyPnlCard({
 
   const foodTotal = foodVendors.reduce((s, v) => s + (Number(vendorAmounts[v.id]) || 0), 0);
   const paperTotal = paperVendors.reduce((s, v) => s + (Number(vendorAmounts[v.id]) || 0), 0);
-  const totalCostOfGoods = foodTotal + beerWineCost;
+  const totalCostOfGoods = foodTotal;
   const expensesTotal = wages + totalCostOfGoods + paperTotal + repairs;
 
   const sales = week.totalSales;
@@ -258,7 +258,7 @@ function WeeklyPnlCard({
       <div className="p-4 space-y-4">
         <Section title="">
           <Row label="Food Sales (from daily sales)" amount={sales} bold />
-          <Row label="Beer and Wine" amount={0} muted />
+          <Row label="Catering" amount={0} muted />
           <RowTotal label="Total Sales" amount={sales} />
         </Section>
 
@@ -285,10 +285,6 @@ function WeeklyPnlCard({
             onAdd={() => newFood.trim() && addVendorMut.mutate({ section: "food_purchases", name: newFood.trim() })}
           />
           <RowTotal label="Food Purchases 35%" amount={foodTotal} pct={pct(foodTotal)} />
-        </Section>
-
-        <Section title="">
-          <EditableRow label="Beer and Wine" value={beerWineCost} onChange={setBeerWineCost} pct={pct(beerWineCost)} bold />
         </Section>
 
         <RowTotal label="Total Cost of Goods" amount={totalCostOfGoods} pct={pct(totalCostOfGoods)} />
