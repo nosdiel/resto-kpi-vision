@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedWhoToCallRouteImport } from './routes/_authenticated/who-to-call'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
 import { Route as AuthenticatedToastRouteImport } from './routes/_authenticated/toast'
@@ -38,6 +39,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/callback',
+  path: '/callback',
+  getParentRoute: () => AuthRoute,
 } as any)
 const AuthenticatedWhoToCallRoute = AuthenticatedWhoToCallRouteImport.update({
   id: '/who-to-call',
@@ -103,7 +109,7 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/desserts': typeof AuthenticatedDessertsRoute
   '/locations': typeof AuthenticatedLocationsRoute
@@ -116,10 +122,11 @@ export interface FileRoutesByFullPath {
   '/toast': typeof AuthenticatedToastRoute
   '/users': typeof AuthenticatedUsersRoute
   '/who-to-call': typeof AuthenticatedWhoToCallRoute
+  '/auth/callback': typeof AuthCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/desserts': typeof AuthenticatedDessertsRoute
   '/locations': typeof AuthenticatedLocationsRoute
@@ -132,12 +139,13 @@ export interface FileRoutesByTo {
   '/toast': typeof AuthenticatedToastRoute
   '/users': typeof AuthenticatedUsersRoute
   '/who-to-call': typeof AuthenticatedWhoToCallRoute
+  '/auth/callback': typeof AuthCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/desserts': typeof AuthenticatedDessertsRoute
   '/_authenticated/locations': typeof AuthenticatedLocationsRoute
@@ -150,6 +158,7 @@ export interface FileRoutesById {
   '/_authenticated/toast': typeof AuthenticatedToastRoute
   '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/_authenticated/who-to-call': typeof AuthenticatedWhoToCallRoute
+  '/auth/callback': typeof AuthCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -168,6 +177,7 @@ export interface FileRouteTypes {
     | '/toast'
     | '/users'
     | '/who-to-call'
+    | '/auth/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -184,6 +194,7 @@ export interface FileRouteTypes {
     | '/toast'
     | '/users'
     | '/who-to-call'
+    | '/auth/callback'
   id:
     | '__root__'
     | '/'
@@ -201,12 +212,13 @@ export interface FileRouteTypes {
     | '/_authenticated/toast'
     | '/_authenticated/users'
     | '/_authenticated/who-to-call'
+    | '/auth/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
-  AuthRoute: typeof AuthRoute
+  AuthRoute: typeof AuthRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -231,6 +243,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof AuthRoute
     }
     '/_authenticated/who-to-call': {
       id: '/_authenticated/who-to-call'
@@ -352,10 +371,20 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface AuthRouteChildren {
+  AuthCallbackRoute: typeof AuthCallbackRoute
+}
+
+const AuthRouteChildren: AuthRouteChildren = {
+  AuthCallbackRoute: AuthCallbackRoute,
+}
+
+const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
-  AuthRoute: AuthRoute,
+  AuthRoute: AuthRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
