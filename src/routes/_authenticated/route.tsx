@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, redirect, Link, useRouter } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { LayoutDashboard, MapPin, Target, IceCream, Plug, Utensils, Users, LogOut } from "lucide-react";
+import { LayoutDashboard, MapPin, Target, IceCream, Plug, Utensils, Users, LogOut, Receipt } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -20,6 +20,7 @@ function AuthedLayout() {
   };
   const items = [
     { to: "/dashboard", label: "Daily Sales", icon: LayoutDashboard },
+    { to: "/pnl", label: "Weekly PNL", icon: Receipt },
     { to: "/targets", label: "Targets", icon: Target },
     { to: "/locations", label: "Locations", icon: MapPin },
     { to: "/desserts", label: "Dessert of Month", icon: IceCream },
