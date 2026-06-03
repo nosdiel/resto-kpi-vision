@@ -23,25 +23,22 @@ export const upsertDailySales = createServerFn({ method: "POST" })
       .from("daily_sales").select("*")
       .eq("location_id", data.locationId).eq("business_date", data.businessDate).maybeSingle();
 
-    const isOverride = existing && existing.source === "square";
-    const payload: Record<string, unknown> = {
+    const isOverride = !!(existing && existing.source === "square");
+    const payload = {
       location_id: data.locationId,
       business_date: data.businessDate,
       actual_sales: data.actualSales,
       actual_customer_count: data.actualCustomerCount,
       source: existing?.source ?? "manual",
-    };
-    if (data.lastYearSales !== undefined) payload.last_year_sales = data.lastYearSales;
-    if (data.lastYearCustomerCount !== undefined) payload.last_year_customer_count = data.lastYearCustomerCount;
-    if (data.dessertCount !== undefined) payload.dessert_count = data.dessertCount;
-
-    if (isOverride) {
-      payload.original_actual_sales = existing.original_actual_sales ?? existing.actual_sales;
-      payload.original_actual_customer_count = existing.original_actual_customer_count ?? existing.actual_customer_count;
-      payload.override_note = data.note ?? null;
-      payload.overridden_by = userId;
-      payload.overridden_at = new Date().toISOString();
-    }
+      last_year_sales: data.lastYearSales ?? existing?.last_year_sales ?? 0,
+      last_year_customer_count: data.lastYearCustomerCount ?? existing?.last_year_customer_count ?? 0,
+      dessert_count: data.dessertCount ?? existing?.dessert_count ?? 0,
+      original_actual_sales: isOverride ? (existing?.original_actual_sales ?? existing?.actual_sales ?? null) : null,
+      original_actual_customer_count: isOverride ? (existing?.original_actual_customer_count ?? existing?.actual_customer_count ?? null) : null,
+      override_note: isOverride ? (data.note ?? null) : null,
+      overridden_by: isOverride ? userId : null,
+      overridden_at: isOverride ? new Date().toISOString() : null,
+    } as const;
 
     const { error } = await supabase
       .from("daily_sales")
@@ -54,8 +51,8 @@ export const upsertDailySales = createServerFn({ method: "POST" })
       action: existing ? "update" : "insert",
       entity: "daily_sales",
       entity_id: `${data.locationId}:${data.businessDate}`,
-      before: existing ?? null,
-      after: payload,
+      before: (existing ?? null) as never,
+      after: payload as unknown as never,
     });
     return { ok: true };
   });
