@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useState, useMemo, Fragment } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -158,10 +158,10 @@ function BonusCalculatorPage() {
           <div className="font-medium text-muted-foreground">Payout %</div>
           <div>&lt; 95%</div><div>0%</div>
           {PAYOUT_TABLE.map((r) => (
-            <>
-              <div key={`p-${r.pct}`}>{r.pct}%</div>
-              <div key={`v-${r.pct}`}>{r.payout}%</div>
-            </>
+            <Fragment key={r.pct}>
+              <div>{r.pct}%</div>
+              <div>{r.payout}%</div>
+            </Fragment>
           ))}
         </div>
       </Card>
