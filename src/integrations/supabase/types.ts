@@ -408,6 +408,48 @@ export type Database = {
         }
         Relationships: []
       }
+      vendor_contacts: {
+        Row: {
+          active: boolean
+          category: string
+          contact_person: string | null
+          created_at: string
+          email: string | null
+          id: string
+          location_id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category: string
+          contact_person?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          location_id: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          contact_person?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          location_id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       weekly_pnl: {
         Row: {
           beer_wine_cost: number
