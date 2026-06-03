@@ -215,6 +215,7 @@ function WeeklyPnlCard({
           wages,
           beerWineCost,
           repairs,
+          catering,
           vendorAmounts,
         },
       }),
