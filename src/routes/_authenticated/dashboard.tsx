@@ -36,7 +36,7 @@ function DashboardPage() {
 
   const computed = useMemo(() => {
     const dayRows = rows.map((d, i) => {
-      const salesTarget = d.last_year_sales * (1 + targetPct / 100);
+      const salesTarget = d.last_year_sales * (targetPct / 100);
       return {
         ...d,
         dayName: DAY_NAMES[i],
