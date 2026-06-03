@@ -2,35 +2,190 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-/**
- * Square OAuth + sync is scaffolded. Manual setup is supported now:
- * admins can paste a Square access token + location id per dashboard
- * location. The "Sync Now" handler will hit the Square API and pull
- * the last N days of sales.
- */
+const SQUARE_VERSION = "2024-10-17";
+const SQUARE_CONNECTION_ERROR = "Square token missing permission or location does not belong to this Square account/environment.";
+const requiredPermissions = ["ORDERS_READ", "PAYMENTS_READ", "MERCHANT_PROFILE_READ", "ITEMS_READ"] as const;
+
+type SquareEnvironment = "production" | "sandbox";
+type SquarePermission = typeof requiredPermissions[number];
+type SquareLocationOption = {
+  id: string;
+  name: string;
+  merchantId: string | null;
+  status: string | null;
+  timezone: string | null;
+  currency: string | null;
+};
+
+function squareBase(environment: SquareEnvironment) {
+  return environment === "sandbox" ? "https://connect.squareupsandbox.com" : "https://connect.squareup.com";
+}
+
+function squareHeaders(accessToken: string) {
+  return {
+    "Square-Version": SQUARE_VERSION,
+    Authorization: `Bearer ${accessToken}`,
+    "Content-Type": "application/json",
+  };
+}
+
+async function readSquareError(res: Response) {
+  const text = await res.text();
+  return text.slice(0, 500);
+}
+
+async function checkSquarePermission(
+  permission: SquarePermission,
+  environment: SquareEnvironment,
+  accessToken: string,
+  path: string,
+  init?: RequestInit,
+) {
+  const res = await fetch(`${squareBase(environment)}${path}`, {
+    ...init,
+    headers: squareHeaders(accessToken),
+  });
+
+  if (res.ok) return { permission, ok: true, status: res.status, response: null };
+
+  const response = await readSquareError(res);
+  console.error("Square permission validation failed", { permission, environment, status: res.status, response });
+  return { permission, ok: false, status: res.status, response };
+}
+
+async function validateSquareConnection({
+  accessToken,
+  environment,
+  selectedLocationId,
+}: {
+  accessToken: string;
+  environment: SquareEnvironment;
+  selectedLocationId?: string;
+}) {
+  if (!accessToken.trim()) {
+    return { ok: false, merchantId: null, locations: [] as SquareLocationOption[], missingPermissions: [...requiredPermissions], error: SQUARE_CONNECTION_ERROR };
+  }
+
+  const locationsRes = await fetch(`${squareBase(environment)}/v2/locations`, {
+    headers: squareHeaders(accessToken),
+  });
+
+  if (!locationsRes.ok) {
+    const response = await readSquareError(locationsRes);
+    console.error("Square locations validation failed", { environment, status: locationsRes.status, response });
+    return { ok: false, merchantId: null, locations: [] as SquareLocationOption[], missingPermissions: ["MERCHANT_PROFILE_READ" as SquarePermission], error: SQUARE_CONNECTION_ERROR };
+  }
+
+  const locationsJson = (await locationsRes.json()) as { locations?: Array<Record<string, unknown>> };
+  const locations = (locationsJson.locations ?? [])
+    .filter((loc) => typeof loc.id === "string" && loc.id.length > 0)
+    .map((loc) => ({
+      id: loc.id as string,
+      name: typeof loc.name === "string" && loc.name.length > 0 ? loc.name : (loc.id as string),
+      merchantId: typeof loc.merchant_id === "string" ? loc.merchant_id : null,
+      status: typeof loc.status === "string" ? loc.status : null,
+      timezone: typeof loc.timezone === "string" ? loc.timezone : null,
+      currency: typeof loc.currency === "string" ? loc.currency : null,
+    }));
+
+  const merchantId = locations.find((loc) => loc.merchantId)?.merchantId ?? null;
+  const checkLocationId = selectedLocationId ?? locations[0]?.id;
+
+  if (!checkLocationId || (selectedLocationId && !locations.some((loc) => loc.id === selectedLocationId))) {
+    return { ok: false, merchantId, locations, missingPermissions: [] as SquarePermission[], error: SQUARE_CONNECTION_ERROR };
+  }
+
+  const permissionChecks = await Promise.all([
+    checkSquarePermission("ORDERS_READ", environment, accessToken, "/v2/orders/search", {
+      method: "POST",
+      body: JSON.stringify({ location_ids: [checkLocationId], limit: 1 }),
+    }),
+    checkSquarePermission("PAYMENTS_READ", environment, accessToken, "/v2/payments?limit=1"),
+    checkSquarePermission("ITEMS_READ", environment, accessToken, "/v2/catalog/list?types=ITEM"),
+  ]);
+
+  const missingPermissions = permissionChecks
+    .filter((check) => !check.ok)
+    .map((check) => check.permission);
+
+  if (missingPermissions.length > 0) {
+    return { ok: false, merchantId, locations, missingPermissions, error: SQUARE_CONNECTION_ERROR };
+  }
+
+  return { ok: true, merchantId, locations, missingPermissions: [] as SquarePermission[], error: null };
+}
+
+export const testSquareConnection = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    accessToken: z.string().min(10).max(2000),
+    environment: z.enum(["production", "sandbox"]),
+  }).parse(d))
+  .handler(async ({ data }) => validateSquareConnection(data));
+
+export const getSquareConnectionLocations = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    locationId: z.string().uuid(),
+  }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: conn, error } = await supabaseAdmin
+      .from("square_connections")
+      .select("access_token, square_location_id, environment")
+      .eq("location_id", data.locationId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!conn?.access_token) return { ok: false, merchantId: null, locations: [], missingPermissions: [...requiredPermissions], error: SQUARE_CONNECTION_ERROR };
+
+    return validateSquareConnection({
+      accessToken: conn.access_token,
+      environment: conn.environment === "sandbox" ? "sandbox" : "production",
+      selectedLocationId: conn.square_location_id,
+    });
+  });
 
 export const saveSquareConnection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({
     locationId: z.string().uuid(),
     squareLocationId: z.string().min(1).max(64),
-    accessToken: z.string().min(10).max(2000),
-    merchantId: z.string().max(64).optional().nullable(),
+    accessToken: z.string().min(10).max(2000).optional(),
     environment: z.enum(["production", "sandbox"]).default("production"),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: existing, error: existingError } = await supabaseAdmin
+      .from("square_connections")
+      .select("access_token")
+      .eq("location_id", data.locationId)
+      .maybeSingle();
+    if (existingError) throw new Error(existingError.message);
+
+    const accessToken = data.accessToken ?? existing?.access_token;
+    if (!accessToken) return { ok: false, merchantId: null, locations: [], missingPermissions: [...requiredPermissions], error: SQUARE_CONNECTION_ERROR };
+
+    const validation = await validateSquareConnection({
+      accessToken,
+      environment: data.environment,
+      selectedLocationId: data.squareLocationId,
+    });
+
+    if (!validation.ok) return validation;
+
+    const squareLocation = validation.locations.find((loc) => loc.id === data.squareLocationId);
     const { error } = await context.supabase
       .from("square_connections")
       .upsert({
         location_id: data.locationId,
         square_location_id: data.squareLocationId,
-        access_token: data.accessToken,
-        merchant_id: data.merchantId ?? null,
+        access_token: accessToken,
+        merchant_id: squareLocation?.merchantId ?? validation.merchantId,
         environment: data.environment,
         created_by: context.userId,
       }, { onConflict: "location_id" });
     if (error) throw new Error(error.message);
-    return { ok: true };
+    return validation;
   });
 
 export const listSquareConnections = createServerFn({ method: "GET" })
@@ -52,29 +207,33 @@ export const syncSquareLocation = createServerFn({ method: "POST" })
   }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    // Fetch connection (admin client to read tokens)
     const { data: conn, error: connErr } = await supabaseAdmin
       .from("square_connections").select("*").eq("location_id", data.locationId).maybeSingle();
     if (connErr) throw new Error(connErr.message);
-    if (!conn) throw new Error("No Square connection configured for this location.");
+    if (!conn?.access_token || !conn.square_location_id) {
+      return { ok: false, daysSynced: 0, error: SQUARE_CONNECTION_ERROR };
+    }
 
-    const env = (conn as { environment?: string }).environment ?? process.env.SQUARE_ENV ?? "production";
-    const base = env === "sandbox" ? "https://connect.squareupsandbox.com" : "https://connect.squareup.com";
+    const env = ((conn as { environment?: string }).environment === "sandbox" ? "sandbox" : "production") as SquareEnvironment;
+    const validation = await validateSquareConnection({
+      accessToken: conn.access_token,
+      environment: env,
+      selectedLocationId: conn.square_location_id,
+    });
 
-    // Search orders for the location across the date range. (One request, paginated.)
+    if (!validation.ok) {
+      return { ok: false, daysSynced: 0, error: SQUARE_CONNECTION_ERROR };
+    }
+
     const beginIso = new Date(`${data.startDate}T00:00:00Z`).toISOString();
     const endIso = new Date(`${data.endDate}T23:59:59Z`).toISOString();
     let cursor: string | undefined = undefined;
     const ordersByDate: Record<string, { sales: number; count: number }> = {};
 
     do {
-      const res = await fetch(`${base}/v2/orders/search`, {
+      const res = await fetch(`${squareBase(env)}/v2/orders/search`, {
         method: "POST",
-        headers: {
-          "Square-Version": "2024-10-17",
-          Authorization: `Bearer ${conn.access_token}`,
-          "Content-Type": "application/json",
-        },
+        headers: squareHeaders(conn.access_token),
         body: JSON.stringify({
           location_ids: [conn.square_location_id],
           cursor,
@@ -88,22 +247,9 @@ export const syncSquareLocation = createServerFn({ method: "POST" })
         }),
       });
       if (!res.ok) {
-        const text = await res.text();
-        const reason = res.status === 403
-          ? "Square rejected the sync. Check that the access token has ORDERS_READ permission and that the Square Location ID belongs to the same Square account and environment."
-          : res.status === 401
-            ? "Square could not authorize this token. Check that the access token is current and matches the selected environment."
-            : `Square API error ${res.status}: ${text.slice(0, 300)}`;
-
-        console.error("Square sync failed", {
-          status: res.status,
-          environment: env,
-          locationId: data.locationId,
-          squareLocationId: conn.square_location_id,
-          response: text.slice(0, 500),
-        });
-
-        return { ok: false, daysSynced: 0, error: reason };
+        const response = await readSquareError(res);
+        console.error("Square sync failed", { status: res.status, environment: env, locationId: data.locationId, squareLocationId: conn.square_location_id, response });
+        return { ok: false, daysSynced: 0, error: res.status === 401 || res.status === 403 ? SQUARE_CONNECTION_ERROR : `Square API error ${res.status}: ${response}` };
       }
       const json = (await res.json()) as { orders?: Array<{ closed_at?: string; total_money?: { amount?: number } }>; cursor?: string };
       for (const o of json.orders ?? []) {
@@ -117,7 +263,6 @@ export const syncSquareLocation = createServerFn({ method: "POST" })
       cursor = json.cursor;
     } while (cursor);
 
-    // Upsert daily_sales
     const rows = Object.entries(ordersByDate).map(([date, agg]) => ({
       location_id: data.locationId,
       business_date: date,
