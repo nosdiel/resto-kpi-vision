@@ -7,15 +7,17 @@ import {
   upsertWeeklyPnl,
   addPnlVendor,
   removePnlVendor,
+  renamePnlVendor,
   weeksInQuarter,
 } from "@/lib/pnl.functions";
+import { getMe } from "@/lib/admin.functions";
 import { currentFiscalYearWeek } from "@/lib/fiscal";
 import { fmtCurrency } from "@/lib/format";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { RefreshCw, Plus, X, Save } from "lucide-react";
+import { RefreshCw, Plus, X, Save, Pencil, Check } from "lucide-react";
 import { toast } from "sonner";
 import { QuarterTabs } from "./pnl";
 
@@ -45,6 +47,10 @@ function PnlQuarterPage() {
     queryKey: ["pnl-quarter", locationId, fiscalYear, quarterNum],
     queryFn: () => fetchData({ data: { locationId, fiscalYear, quarter: quarterNum } }),
   });
+
+  const fetchMe = useServerFn(getMe);
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => fetchMe() });
+  const isAdmin = !!me?.isAdmin;
 
   const years = [currentYear - 1, currentYear, currentYear + 1];
   const weekNums = weeksInQuarter(quarterNum);
@@ -101,6 +107,7 @@ function PnlQuarterPage() {
               quarterNum={quarterNum}
               week={w}
               vendors={data.vendors as VendorRow[]}
+              isAdmin={isAdmin}
             />
           ))}
           {data.weeks.length === 0 && weekNums.length > 0 && (
