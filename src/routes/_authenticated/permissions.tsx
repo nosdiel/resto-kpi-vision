@@ -48,7 +48,10 @@ function PermissionsPage() {
   const toggle = useMutation({
     mutationFn: (v: { role: (typeof MANAGED_ROLES)[number]; permission: string; enabled: boolean }) =>
       save({ data: v as never }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["role-permissions"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["role-permissions"] });
+      qc.invalidateQueries({ queryKey: ["my-permissions"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
