@@ -8,7 +8,7 @@ import { fmtCurrency, fmtInt, fmtPct, safeDiv } from "@/lib/format";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Printer } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Daily Sales Activity" }] }),
@@ -78,7 +78,7 @@ function DashboardPage() {
   const weeksForPeriod = weeksInPeriod(period);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 print:p-2 print:space-y-3">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Daily Sales Activity</h1>
@@ -86,12 +86,17 @@ function DashboardPage() {
             {data?.locations.find((l) => l.id === data.locationId)?.name ?? "—"} · FY{fiscalYear} · Period {period} · Week {fiscalWeek}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} /> Refresh
-        </Button>
+        <div className="flex gap-2 print:hidden">
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} /> Refresh
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => window.print()}>
+            <Printer className="h-4 w-4 mr-2" /> Print
+          </Button>
+        </div>
       </header>
 
-      <Card className="p-4">
+      <Card className="p-4 print:hidden">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Filter label="Location">
             <Select value={locationId ?? data?.locationId ?? ""} onValueChange={(v) => setLocationId(v)}>
