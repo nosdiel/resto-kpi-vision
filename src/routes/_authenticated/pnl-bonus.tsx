@@ -66,7 +66,8 @@ function BonusCalculatorPage() {
         <h1 className="text-2xl font-semibold">Bonus Calculator</h1>
         <p className="text-sm text-muted-foreground">
           Store manager bonus: 15% of QTR salary at 100% sales target, scaled by
-          payout table. Requires payroll & food cost targets to be met.
+          payout table. If payroll or food cost targets are missed, bonus is
+          reduced to 40%.
         </p>
       </div>
 
