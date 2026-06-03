@@ -5,6 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export type PermissionKey =
   | "dashboard"
   | "pnl"
+  | "pnl_bonus"
   | "targets"
   | "locations"
   | "desserts"
@@ -16,6 +17,7 @@ export type PermissionKey =
 export const ALL_PERMISSIONS: { key: PermissionKey; label: string }[] = [
   { key: "dashboard", label: "Daily Sales" },
   { key: "pnl", label: "Weekly PNL" },
+  { key: "pnl_bonus", label: "Bonus Calculator" },
   { key: "targets", label: "Targets" },
   { key: "locations", label: "Locations" },
   { key: "desserts", label: "Dessert of Month" },
@@ -29,7 +31,7 @@ export const MANAGED_ROLES = ["admin", "regional_manager", "store_manager"] as c
 
 const RoleEnum = z.enum(["super_admin", "admin", "regional_manager", "store_manager"]);
 const PermEnum = z.enum([
-  "dashboard","pnl","targets","locations","desserts","square","toast","users","permissions",
+  "dashboard","pnl","pnl_bonus","targets","locations","desserts","square","toast","users","permissions",
 ]);
 
 export const listRolePermissions = createServerFn({ method: "GET" })
