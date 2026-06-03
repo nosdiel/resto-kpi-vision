@@ -175,5 +175,17 @@
   html, body { background: white !important; }
   body * { color: black !important; box-shadow: none !important; }
   .overflow-x-auto, .overflow-hidden { overflow: visible !important; }
-  table { width: 100% !important; font-size: 10px !important; page-break-inside: avoid; }
-}
+  table { width: 100% !important; font-size: 9px !important; page-break-inside: avoid; }
+  table th, table td { padding: 2px 4px !important; }
+  main { display: block !important; }
+  /* Scale the dashboard so the table + summary fit on one landscape page */
+  main > div {
+    transform: scale(0.78);
+    transform-origin: top left;
+    width: 128% !important;
+    padding: 0 !important;
+  }
+  .grid { page-break-inside: avoid !important; break-inside: avoid !important; }
+  h1 { font-size: 14px !important; margin: 0 0 4px !important; }
+  header { margin-bottom: 4px !important; }
+ }
