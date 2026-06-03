@@ -267,7 +267,7 @@ function WeeklyPnlCard({
           <RowTotal label="Total Payroll 20%" amount={wages} pct={pct(wages)} />
         </Section>
 
-        <Section title="Food Cost - Goal 33%">
+        <Section title="Food Cost">
           {foodVendors.map((v) => (
             <EditableRow
               key={v.id}
@@ -287,7 +287,7 @@ function WeeklyPnlCard({
           <RowTotal label="Food Cost - Goal 33%" amount={foodTotal} pct={pct(foodTotal)} />
         </Section>
 
-        <RowTotal label="Total Cost of Goods" amount={totalCostOfGoods} pct={pct(totalCostOfGoods)} />
+        
 
         <Section title="Paper Supplies">
           {paperVendors.map((v) => (
@@ -313,7 +313,7 @@ function WeeklyPnlCard({
           <EditableRow label="Total Repairs 1%" value={repairs} onChange={setRepairs} pct={pct(repairs)} bold />
         </Section>
 
-        <RowTotal label="Expenses Total" amount={expensesTotal} pct={pct(expensesTotal)} emphasis />
+        <RowTotal label="Total Cost of Goods" amount={expensesTotal} pct={pct(expensesTotal)} emphasis />
       </div>
     </Card>
   );
