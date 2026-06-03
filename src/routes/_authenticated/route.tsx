@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { LayoutDashboard, MapPin, Target, IceCream, Plug, Utensils, Users, LogOut, Receipt, Shield, Menu, X } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { getMyPermissions } from "@/lib/permissions.functions";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -24,24 +24,17 @@ function AuthedLayout() {
     router.navigate({ to: "/auth" });
   };
   const fetchPerms = useServerFn(getMyPermissions);
-  const [hasSession, setHasSession] = useState(false);
-  useEffect(() => {
-    let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (mounted) setHasSession(!!data.session?.access_token);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      setHasSession(!!session?.access_token);
-    });
-    return () => {
-      mounted = false;
-      sub.subscription.unsubscribe();
-    };
-  }, []);
   const { data: me } = useQuery({
     queryKey: ["my-permissions"],
-    queryFn: () => fetchPerms(),
-    enabled: hasSession,
+    queryFn: async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session?.access_token) return { permissions: [] as string[] };
+      try {
+        return await fetchPerms();
+      } catch {
+        return { permissions: [] as string[] };
+      }
+    },
     retry: false,
   });
   const allowed = new Set(me?.permissions ?? []);
