@@ -15,7 +15,6 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const router = useRouter();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,17 +31,8 @@ function AuthPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email, password,
-          options: { emailRedirectTo: window.location.origin },
-        });
-        if (error) throw error;
-        toast.success("Check your email to confirm your account.");
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Authentication failed");
     } finally { setLoading(false); }
@@ -68,18 +58,15 @@ function AuthPage() {
             <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
+            {loading ? "Please wait…" : "Sign in"}
           </Button>
         </form>
         <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
           <div className="h-px flex-1 bg-border" /> OR <div className="h-px flex-1 bg-border" />
         </div>
         <Button variant="outline" className="w-full" onClick={googleSignIn}>Continue with Google</Button>
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          {mode === "signin" ? "No account?" : "Have an account?"}{" "}
-          <button type="button" onClick={() => setMode(mode === "signin" ? "signup" : "signin")} className="text-primary font-medium hover:underline">
-            {mode === "signin" ? "Sign up" : "Sign in"}
-          </button>
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          Accounts are created by an administrator. Contact your admin for access.
         </p>
         <p className="mt-4 text-xs text-center text-muted-foreground">
           <Link to="/" className="hover:underline">Back home</Link>
