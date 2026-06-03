@@ -63,7 +63,7 @@ export const getPnlWeek = createServerFn({ method: "POST" })
 
     const salesByDate = new Map((sales ?? []).map((s) => [s.business_date, Number(s.actual_sales) || 0]));
     const totalSales = dates.reduce((acc, d) => acc + (salesByDate.get(d) ?? 0), 0);
-    const pnl = pnlRows as { wages?: number; beer_wine_cost?: number; repairs?: number; vendor_amounts?: Record<string, number>; notes?: string | null } | null;
+    const pnl = pnlRows as { wages?: number; beer_wine_cost?: number; repairs?: number; catering?: number; vendor_amounts?: Record<string, number>; notes?: string | null } | null;
     const week = {
       fiscalWeek: data.fiscalWeek,
       weekStart: dates[0],
@@ -72,6 +72,7 @@ export const getPnlWeek = createServerFn({ method: "POST" })
       wages: Number(pnl?.wages ?? 0),
       beerWineCost: Number(pnl?.beer_wine_cost ?? 0),
       repairs: Number(pnl?.repairs ?? 0),
+      catering: Number(pnl?.catering ?? 0),
       vendorAmounts: (pnl?.vendor_amounts ?? {}) as Record<string, number>,
       notes: pnl?.notes ?? null,
       hasEntry: !!pnl,
