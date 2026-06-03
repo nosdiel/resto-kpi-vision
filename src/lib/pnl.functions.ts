@@ -276,7 +276,7 @@ export const getQtrReport = createServerFn({ method: "POST" })
         .in("business_date", [...allDates, ...prevDates]),
       supabase
         .from("weekly_pnl")
-        .select("fiscal_week, wages, beer_wine_cost, vendor_amounts")
+        .select("fiscal_week, wages, beer_wine_cost, catering, vendor_amounts")
         .eq("location_id", locationId)
         .eq("fiscal_year", data.fiscalYear)
         .gte("fiscal_week", startWeek)
