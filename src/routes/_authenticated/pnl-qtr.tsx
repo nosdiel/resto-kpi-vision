@@ -94,13 +94,7 @@ function QtrPage() {
           <Filter label="Region">
             <Select
               value={region}
-              onValueChange={(v) => {
-                setRegion(v);
-                if (v !== "__all__") {
-                  const first = allLocations.find((l) => (l.region ?? "") === v);
-                  if (first) setLocationId(first.id);
-                }
-              }}
+              onValueChange={(v) => setRegion(v)}
             >
               <SelectTrigger><SelectValue placeholder="All regions" /></SelectTrigger>
               <SelectContent>
