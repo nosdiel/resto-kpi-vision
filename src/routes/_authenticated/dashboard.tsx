@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { getDashboard } from "@/lib/dashboard.functions";
-import { DAY_NAMES, getPeriodRanges, periodForWeek, weeksInPeriod } from "@/lib/fiscal";
+import { DAY_NAMES, currentFiscalYearWeek, getPeriodRanges, periodForWeek, weeksInPeriod } from "@/lib/fiscal";
 import { fmtCurrency, fmtInt, fmtPct, safeDiv } from "@/lib/format";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
@@ -18,8 +18,9 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 function DashboardPage() {
   const currentYear = new Date().getUTCFullYear();
-  const [fiscalYear, setFiscalYear] = useState(currentYear);
-  const [fiscalWeek, setFiscalWeek] = useState(1);
+  const initial = currentFiscalYearWeek();
+  const [fiscalYear, setFiscalYear] = useState(initial.fiscalYear);
+  const [fiscalWeek, setFiscalWeek] = useState(initial.fiscalWeek);
   const [locationId, setLocationId] = useState<string | null>(null);
 
   const period = periodForWeek(fiscalWeek);
