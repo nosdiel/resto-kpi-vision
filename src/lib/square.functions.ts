@@ -188,7 +188,7 @@ export const saveSquareConnection = createServerFn({ method: "POST" })
     return validation;
   });
 
-export const listSquareConnections = createServerFn({ method: "POST" })
+export const listSquareConnections = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
