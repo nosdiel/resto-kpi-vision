@@ -49,6 +49,7 @@ function BonusCalculatorPage() {
   const [locationId, setLocationId] = useState<string | null>(null);
 
   const [annualSalary, setAnnualSalary] = useState<string>("");
+  const isAssistant = false; // placeholder, replaced below
   const [salesTarget, setSalesTarget] = useState<string>("");
   const [actualSales, setActualSales] = useState<string>("");
   const [bonusPctOfSalary, setBonusPctOfSalary] = useState<string>("15");
@@ -93,7 +94,11 @@ function BonusCalculatorPage() {
   }, [autoPull, qtr, qtdTotals]);
 
   const result = useMemo(() => {
-    const salary = (parseFloat(annualSalary) || 0) / 4; // quarterly salary
+    const input = parseFloat(annualSalary) || 0;
+    const isAssistantManager = bonusPctOfSalary === "7.5";
+    // Assistant Manager: input is hourly rate -> quarterly = hourly * 40 hrs * 13 weeks
+    // Store Manager: input is annual salary -> quarterly = annual / 4
+    const salary = isAssistantManager ? input * 40 * 13 : input / 4;
     const target = parseFloat(salesTarget) || 0;
     const actual = parseFloat(actualSales) || 0;
     const basePct = parseFloat(bonusPctOfSalary) || 0;
@@ -171,7 +176,7 @@ function BonusCalculatorPage() {
       <Card className="p-6 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Annual Salary</Label>
+            <Label>{bonusPctOfSalary === "7.5" ? "Hourly Rate" : "Annual Salary"}</Label>
             <Input
               type="number"
               value={annualSalary}
