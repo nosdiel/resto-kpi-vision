@@ -34,17 +34,23 @@ function DashboardPage() {
   const target = data?.target;
   const targetPct = Number(target?.target_pct_over_ly ?? 0);
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   const computed = useMemo(() => {
     const dayRows = rows.map((d, i) => {
       const salesTarget = d.last_year_sales * (1 + targetPct / 100);
+      const date = new Date(d.business_date + "T00:00:00");
+      const isFuture = date > today;
       return {
         ...d,
         dayName: DAY_NAMES[i],
         salesTarget,
-        salesVariance: d.actual_sales - salesTarget,
+        salesVariance: isFuture ? undefined : d.actual_sales - salesTarget,
         lyAvgTicket: safeDiv(d.last_year_sales, d.last_year_customer_count),
         actualAvgTicket: safeDiv(d.actual_sales, d.actual_customer_count),
-        custVariance: d.actual_customer_count - d.last_year_customer_count,
+        custVariance: isFuture ? undefined : d.actual_customer_count - d.last_year_customer_count,
+        isFuture,
       };
     });
     const totals = dayRows.reduce(
@@ -52,10 +58,10 @@ function DashboardPage() {
         last_year_sales: a.last_year_sales + d.last_year_sales,
         salesTarget: a.salesTarget + d.salesTarget,
         actual_sales: a.actual_sales + d.actual_sales,
-        salesVariance: a.salesVariance + d.salesVariance,
+        salesVariance: a.salesVariance + (d.salesVariance ?? 0),
         last_year_customer_count: a.last_year_customer_count + d.last_year_customer_count,
         actual_customer_count: a.actual_customer_count + d.actual_customer_count,
-        custVariance: a.custVariance + d.custVariance,
+        custVariance: a.custVariance + (d.custVariance ?? 0),
         dessert_count: a.dessert_count + d.dessert_count,
       }),
       { last_year_sales: 0, salesTarget: 0, actual_sales: 0, salesVariance: 0, last_year_customer_count: 0, actual_customer_count: 0, custVariance: 0, dessert_count: 0 },
