@@ -148,6 +148,7 @@ type WeekRow = {
   wages: number;
   beerWineCost: number;
   repairs: number;
+  catering: number;
   vendorAmounts: Record<string, number>;
   notes: string | null;
   hasEntry: boolean;
@@ -177,6 +178,7 @@ function WeeklyPnlCard({
   const [wages, setWages] = useState(week.wages);
   const [beerWineCost, setBeerWineCost] = useState(week.beerWineCost);
   const [repairs, setRepairs] = useState(week.repairs);
+  const [catering, setCatering] = useState(week.catering);
   const [vendorAmounts, setVendorAmounts] = useState<Record<string, number>>(week.vendorAmounts);
   const [newFood, setNewFood] = useState("");
   const [newPaper, setNewPaper] = useState("");
@@ -185,8 +187,9 @@ function WeeklyPnlCard({
     setWages(week.wages);
     setBeerWineCost(week.beerWineCost);
     setRepairs(week.repairs);
+    setCatering(week.catering);
     setVendorAmounts(week.vendorAmounts);
-  }, [week.wages, week.beerWineCost, week.repairs, week.vendorAmounts]);
+  }, [week.wages, week.beerWineCost, week.repairs, week.catering, week.vendorAmounts]);
 
   const foodVendors = vendors.filter((v) => v.section === "food_purchases");
   const paperVendors = vendors.filter((v) => v.section === "paper_supplies");
@@ -212,6 +215,7 @@ function WeeklyPnlCard({
           wages,
           beerWineCost,
           repairs,
+          catering,
           vendorAmounts,
         },
       }),
@@ -258,7 +262,7 @@ function WeeklyPnlCard({
       <div className="p-4 space-y-4">
         <Section title="">
           <Row label="Food Sales (from daily sales)" amount={sales} bold />
-          <Row label="Catering" amount={0} muted />
+          <EditableRow label="Catering" value={catering} onChange={setCatering} pct={pct(catering)} />
           <RowTotal label="Total Sales" amount={sales} />
         </Section>
 

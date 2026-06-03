@@ -411,6 +411,7 @@ export type Database = {
       weekly_pnl: {
         Row: {
           beer_wine_cost: number
+          catering: number | null
           created_at: string
           fiscal_week: number
           fiscal_year: number
@@ -425,6 +426,7 @@ export type Database = {
         }
         Insert: {
           beer_wine_cost?: number
+          catering?: number | null
           created_at?: string
           fiscal_week: number
           fiscal_year: number
@@ -439,6 +441,7 @@ export type Database = {
         }
         Update: {
           beer_wine_cost?: number
+          catering?: number | null
           created_at?: string
           fiscal_week?: number
           fiscal_year?: number
