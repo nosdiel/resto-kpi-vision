@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -66,6 +66,8 @@ function PnlPage() {
           </p>
         </div>
         <div className="flex gap-2 print:hidden">
+          <Button variant="outline" size="sm" disabled>Weekly PNL</Button>
+          <Link to="/pnl-qtr"><Button variant="outline" size="sm">QTR Report</Button></Link>
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
             <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} /> Refresh
           </Button>
