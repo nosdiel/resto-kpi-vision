@@ -49,7 +49,6 @@ function BonusCalculatorPage() {
   const [locationId, setLocationId] = useState<string | null>(null);
 
   const [annualSalary, setAnnualSalary] = useState<string>("");
-  const isAssistant = false; // placeholder, replaced below
   const [salesTarget, setSalesTarget] = useState<string>("");
   const [actualSales, setActualSales] = useState<string>("");
   const [bonusPctOfSalary, setBonusPctOfSalary] = useState<string>("15");
