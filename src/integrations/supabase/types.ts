@@ -14,16 +14,373 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      audit_log: {
+        Row: {
+          action: string
+          after: Json | null
+          before: Json | null
+          created_at: string
+          entity: string
+          entity_id: string | null
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          after?: Json | null
+          before?: Json | null
+          created_at?: string
+          entity: string
+          entity_id?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          after?: Json | null
+          before?: Json | null
+          created_at?: string
+          entity?: string
+          entity_id?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      daily_sales: {
+        Row: {
+          actual_customer_count: number
+          actual_sales: number
+          business_date: string
+          created_at: string
+          dessert_count: number
+          id: string
+          last_synced_at: string | null
+          last_year_customer_count: number
+          last_year_sales: number
+          location_id: string
+          original_actual_customer_count: number | null
+          original_actual_sales: number | null
+          overridden_at: string | null
+          overridden_by: string | null
+          override_note: string | null
+          source: Database["public"]["Enums"]["sales_source"]
+          updated_at: string
+        }
+        Insert: {
+          actual_customer_count?: number
+          actual_sales?: number
+          business_date: string
+          created_at?: string
+          dessert_count?: number
+          id?: string
+          last_synced_at?: string | null
+          last_year_customer_count?: number
+          last_year_sales?: number
+          location_id: string
+          original_actual_customer_count?: number | null
+          original_actual_sales?: number | null
+          overridden_at?: string | null
+          overridden_by?: string | null
+          override_note?: string | null
+          source?: Database["public"]["Enums"]["sales_source"]
+          updated_at?: string
+        }
+        Update: {
+          actual_customer_count?: number
+          actual_sales?: number
+          business_date?: string
+          created_at?: string
+          dessert_count?: number
+          id?: string
+          last_synced_at?: string | null
+          last_year_customer_count?: number
+          last_year_sales?: number
+          location_id?: string
+          original_actual_customer_count?: number | null
+          original_actual_sales?: number | null
+          overridden_at?: string | null
+          overridden_by?: string | null
+          override_note?: string | null
+          source?: Database["public"]["Enums"]["sales_source"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_sales_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dessert_items: {
+        Row: {
+          active_from: string | null
+          active_to: string | null
+          created_at: string
+          id: string
+          location_id: string | null
+          name: string
+          square_item_id: string | null
+        }
+        Insert: {
+          active_from?: string | null
+          active_to?: string | null
+          created_at?: string
+          id?: string
+          location_id?: string | null
+          name: string
+          square_item_id?: string | null
+        }
+        Update: {
+          active_from?: string | null
+          active_to?: string | null
+          created_at?: string
+          id?: string
+          location_id?: string | null
+          name?: string
+          square_item_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dessert_items_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fiscal_year_settings: {
+        Row: {
+          created_at: string
+          fiscal_year: number
+          start_date: string
+        }
+        Insert: {
+          created_at?: string
+          fiscal_year: number
+          start_date: string
+        }
+        Update: {
+          created_at?: string
+          fiscal_year?: number
+          start_date?: string
+        }
+        Relationships: []
+      }
+      locations: {
+        Row: {
+          active: boolean
+          address: string | null
+          created_at: string
+          id: string
+          name: string
+          region: string | null
+          timezone: string
+        }
+        Insert: {
+          active?: boolean
+          address?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          region?: string | null
+          timezone?: string
+        }
+        Update: {
+          active?: boolean
+          address?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          region?: string | null
+          timezone?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      square_connections: {
+        Row: {
+          access_token: string
+          created_at: string
+          created_by: string | null
+          id: string
+          location_id: string
+          merchant_id: string | null
+          refresh_token: string | null
+          square_location_id: string
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          location_id: string
+          merchant_id?: string | null
+          refresh_token?: string | null
+          square_location_id: string
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          location_id?: string
+          merchant_id?: string | null
+          refresh_token?: string | null
+          square_location_id?: string
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "square_connections_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: true
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_locations: {
+        Row: {
+          id: string
+          location_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          location_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          location_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_locations_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      weekly_targets: {
+        Row: {
+          avg_ticket_goal: number | null
+          created_at: string
+          created_by: string | null
+          fiscal_week: number
+          fiscal_year: number
+          id: string
+          location_id: string
+          notes: string | null
+          target_pct_over_ly: number
+          updated_at: string
+        }
+        Insert: {
+          avg_ticket_goal?: number | null
+          created_at?: string
+          created_by?: string | null
+          fiscal_week: number
+          fiscal_year: number
+          id?: string
+          location_id: string
+          notes?: string | null
+          target_pct_over_ly?: number
+          updated_at?: string
+        }
+        Update: {
+          avg_ticket_goal?: number | null
+          created_at?: string
+          created_by?: string | null
+          fiscal_week?: number
+          fiscal_year?: number
+          id?: string
+          location_id?: string
+          notes?: string | null
+          target_pct_over_ly?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_targets_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      can_access_location: {
+        Args: { _location_id: string; _user_id: string }
+        Returns: boolean
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "regional_manager" | "store_manager"
+      sales_source: "square" | "manual"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +507,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "regional_manager", "store_manager"],
+      sales_source: ["square", "manual"],
+    },
   },
 } as const
