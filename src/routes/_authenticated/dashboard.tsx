@@ -148,12 +148,12 @@ function DashboardPage() {
                   <td className="px-3 py-2 text-right">{fmtCurrency(d.last_year_sales)}</td>
                   <td className="px-3 py-2 text-right">{fmtCurrency(d.salesTarget)}</td>
                   <td className="px-3 py-2 text-right font-semibold">{fmtCurrency(d.actual_sales)}</td>
-                  <td className={`px-3 py-2 text-right font-medium ${d.salesVariance >= 0 ? "text-success" : "text-destructive"}`}>{fmtCurrency(d.salesVariance)}</td>
+                  <td className={`px-3 py-2 text-right font-medium ${d.salesVariance === undefined ? "" : d.salesVariance >= 0 ? "text-success" : "text-destructive"}`}>{d.salesVariance === undefined ? "—" : fmtCurrency(d.salesVariance)}</td>
                   <td className="px-3 py-2 text-right">{fmtCurrency(d.lyAvgTicket)}</td>
                   <td className="px-3 py-2 text-right">{fmtCurrency(d.actualAvgTicket)}</td>
                   <td className="px-3 py-2 text-right">{fmtInt(d.last_year_customer_count)}</td>
                   <td className="px-3 py-2 text-right">{fmtInt(d.actual_customer_count)}</td>
-                  <td className={`px-3 py-2 text-right font-medium ${d.custVariance >= 0 ? "text-success" : "text-destructive"}`}>{fmtInt(d.custVariance)}</td>
+                  <td className={`px-3 py-2 text-right font-medium ${d.custVariance === undefined ? "" : d.custVariance >= 0 ? "text-success" : "text-destructive"}`}>{d.custVariance === undefined ? "—" : fmtInt(d.custVariance)}</td>
                   <td className="px-3 py-2 text-right">{fmtInt(d.dessert_count)}</td>
                 </tr>
               ))}
