@@ -65,6 +65,7 @@ function SquarePage() {
             <TableRow>
               <TableHead>Location</TableHead>
               <TableHead>Square Location ID</TableHead>
+              <TableHead>Environment</TableHead>
               <TableHead>Merchant</TableHead>
               <TableHead>Last updated</TableHead>
               <TableHead className="w-48" />
@@ -73,7 +74,7 @@ function SquarePage() {
           <TableBody>
             {(locs ?? []).length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
                   <p className="mb-3">No locations yet. Add one to start connecting Square.</p>
                   <Button asChild size="sm">
                     <Link to="/locations"><Plus className="h-4 w-4 mr-1" /> Add location</Link>
@@ -86,6 +87,7 @@ function SquarePage() {
                 <TableRow key={l.id}>
                   <TableCell className="font-medium">{l.name}</TableCell>
                   <TableCell className="text-muted-foreground">{c?.square_location_id ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{c?.environment ? <Badge variant="outline">{c.environment}</Badge> : "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{c?.merchant_id ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{c?.updated_at ? new Date(c.updated_at).toLocaleString() : "—"}</TableCell>
                   <TableCell className="flex gap-2">
