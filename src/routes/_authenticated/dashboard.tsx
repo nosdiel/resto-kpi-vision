@@ -128,8 +128,8 @@ function DashboardPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-table-header text-table-header-foreground">
-                {["Day", "Last Year Sales", "Sales Target", "Actual Sales", "Sales Var", "LY Avg Ticket", "Actual Avg Ticket", "LY Cust Count", "Actual Cust Count", "Cust Var", "Dessert/Mo"].map((h) => (
-                  <th key={h} className="px-3 py-2.5 text-right font-semibold whitespace-nowrap first:text-left">{h}</th>
+                {["DAYS", "LY SALES", "TARGET", "ACTUAL SALES", "VAR SALES", "LY AVG", "ACTUAL AVG", "LY CUST", "ACTUAL CUST", "VAR CUST", "DESSERT MONTH"].map((h) => (
+                  <th key={h} className="px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-wide whitespace-nowrap first:text-left">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -168,15 +168,29 @@ function DashboardPage() {
         </div>
       </Card>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Kpi label="Weekly Sales Target" value={fmtCurrency(computed.totals.salesTarget)} sub={`${targetPct >= 0 ? "+" : ""}${targetPct}% over LY`} />
-        <Kpi label="Weekly Actual Sales" value={fmtCurrency(computed.totals.actual_sales)} />
-        <Kpi label="Weekly Sales Variance" value={fmtCurrency(computed.totals.salesVariance)} sub={fmtPct(variancePct)} positive={computed.totals.salesVariance >= 0} />
-        <Kpi label="Avg Ticket Goal" value={fmtCurrency(avgTicketGoal)} />
-        <Kpi label="Avg Ticket Variance" value={fmtCurrency(avgTicketVariance)} positive={avgTicketVariance >= 0} />
-        <Kpi label="LY Customer Count" value={fmtInt(computed.totals.last_year_customer_count)} />
-        <Kpi label="Actual Customer Count" value={fmtInt(computed.totals.actual_customer_count)} />
-        <Kpi label="Customer Count Variance" value={fmtInt(computed.totals.custVariance)} positive={computed.totals.custVariance >= 0} />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <SummaryBox
+          primaryLabel="SALES TARGET"
+          primaryValue={fmtCurrency(computed.totals.salesTarget)}
+          varianceLabel="VARIANCE"
+          varianceValue={fmtCurrency(computed.totals.salesVariance)}
+          variancePositive={computed.totals.salesVariance >= 0}
+          sub={fmtPct(variancePct)}
+        />
+        <SummaryBox
+          primaryLabel="AVG GOAL"
+          primaryValue={fmtCurrency(avgTicketGoal)}
+          varianceLabel="VARIANCE"
+          varianceValue={fmtCurrency(avgTicketVariance)}
+          variancePositive={avgTicketVariance >= 0}
+        />
+        <SummaryBox
+          primaryLabel="LY CUST"
+          primaryValue={fmtInt(computed.totals.last_year_customer_count)}
+          varianceLabel="VARIANCE"
+          varianceValue={fmtInt(computed.totals.custVariance)}
+          variancePositive={computed.totals.custVariance >= 0}
+        />
       </div>
     </div>
   );
@@ -197,6 +211,43 @@ function Kpi({ label, value, sub, positive }: { label: string; value: string; su
       <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
       <div className={`mt-2 text-2xl font-bold ${positive === undefined ? "text-foreground" : positive ? "text-success" : "text-destructive"}`}>{value}</div>
       {sub && <div className="text-xs text-muted-foreground mt-1">{sub}</div>}
+    </Card>
+  );
+}
+
+function SummaryBox({
+  primaryLabel,
+  primaryValue,
+  varianceLabel,
+  varianceValue,
+  variancePositive,
+  sub,
+}: {
+  primaryLabel: string;
+  primaryValue: string;
+  varianceLabel: string;
+  varianceValue: string;
+  variancePositive: boolean;
+  sub?: string;
+}) {
+  return (
+    <Card className="p-0 overflow-hidden">
+      <div className="grid grid-cols-[1fr_auto] divide-x divide-border">
+        <div className="p-4">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground">{primaryLabel}</div>
+          <div className="mt-1 text-2xl font-bold text-foreground">{primaryValue}</div>
+        </div>
+        <div className="p-4 min-w-[180px]">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+            {varianceLabel}
+            <span className={variancePositive ? "text-success" : "text-destructive"}>
+              {variancePositive ? "▲" : "▼"}
+            </span>
+          </div>
+          <div className={`mt-1 text-2xl font-bold ${variancePositive ? "text-success" : "text-destructive"}`}>{varianceValue}</div>
+          {sub && <div className="text-xs text-muted-foreground mt-1">{sub}</div>}
+        </div>
+      </div>
     </Card>
   );
 }
