@@ -37,7 +37,7 @@ function lookupPayoutPct(salesPct: number): number {
 }
 
 function BonusCalculatorPage() {
-  const [qtrSalary, setQtrSalary] = useState<string>("");
+  const [annualSalary, setAnnualSalary] = useState<string>("");
   const [salesTarget, setSalesTarget] = useState<string>("");
   const [actualSales, setActualSales] = useState<string>("");
   const [bonusPctOfSalary, setBonusPctOfSalary] = useState<string>("15");
@@ -45,7 +45,7 @@ function BonusCalculatorPage() {
   const [foodCostMet, setFoodCostMet] = useState<boolean>(true);
 
   const result = useMemo(() => {
-    const salary = parseFloat(qtrSalary) || 0;
+    const salary = (parseFloat(annualSalary) || 0) / 4; // quarterly salary
     const target = parseFloat(salesTarget) || 0;
     const actual = parseFloat(actualSales) || 0;
     const basePct = parseFloat(bonusPctOfSalary) || 0;
@@ -58,14 +58,14 @@ function BonusCalculatorPage() {
     const bonus = gateMet ? fullBonus : fullBonus * 0.4;
 
     return { salesPct, payoutPct, baseBonus, fullBonus, bonus, gateMet };
-  }, [qtrSalary, salesTarget, actualSales, bonusPctOfSalary, payrollMet, foodCostMet]);
+  }, [annualSalary, salesTarget, actualSales, bonusPctOfSalary, payrollMet, foodCostMet]);
 
   return (
     <div className="p-6 md:p-8 max-w-3xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Bonus Calculator</h1>
         <p className="text-sm text-muted-foreground">
-          Store manager bonus: 15% of QTR salary at 100% sales target, scaled by
+          Store manager bonus: 15% of QTR salary (annual ÷ 4) at 100% sales target, scaled by
           payout table. If payroll or food cost targets are missed, bonus is
           reduced to 40%.
         </p>
@@ -74,11 +74,11 @@ function BonusCalculatorPage() {
       <Card className="p-6 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Quarter Salary</Label>
+            <Label>Annual Salary</Label>
             <Input
               type="number"
-              value={qtrSalary}
-              onChange={(e) => setQtrSalary(e.target.value)}
+              value={annualSalary}
+              onChange={(e) => setAnnualSalary(e.target.value)}
               placeholder="0.00"
             />
           </div>
