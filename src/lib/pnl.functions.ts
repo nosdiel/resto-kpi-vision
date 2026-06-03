@@ -184,3 +184,20 @@ export const removePnlVendor = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const renamePnlVendor = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({
+      vendorId: z.string().uuid(),
+      name: z.string().min(1).max(120),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("pnl_vendors")
+      .update({ name: data.name })
+      .eq("id", data.vendorId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
