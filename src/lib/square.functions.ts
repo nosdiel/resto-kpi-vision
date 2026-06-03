@@ -198,6 +198,43 @@ export const listSquareConnections = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
+export const listSquareCatalogItems = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ locationId: z.string().uuid().optional() }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    let query = supabaseAdmin
+      .from("square_connections")
+      .select("access_token, environment, location_id");
+    if (data.locationId) query = query.eq("location_id", data.locationId);
+    const { data: conns, error } = await query;
+    if (error) throw new Error(error.message);
+    if (!conns || conns.length === 0) return { items: [] as Array<{ id: string; name: string }> };
+
+    const conn = conns[0];
+    const env = (conn.environment === "sandbox" ? "sandbox" : "production") as SquareEnvironment;
+    const items: Array<{ id: string; name: string }> = [];
+    let cursor: string | undefined;
+    do {
+      const url = new URL(`${squareBase(env)}/v2/catalog/list`);
+      url.searchParams.set("types", "ITEM");
+      if (cursor) url.searchParams.set("cursor", cursor);
+      const res = await fetch(url.toString(), { headers: squareHeaders(conn.access_token) });
+      if (!res.ok) {
+        const response = await readSquareError(res);
+        console.error("Square catalog list failed", { status: res.status, response });
+        return { items, error: SQUARE_CONNECTION_ERROR };
+      }
+      const json = (await res.json()) as { objects?: Array<{ id: string; item_data?: { name?: string } }>; cursor?: string };
+      for (const o of json.objects ?? []) {
+        items.push({ id: o.id, name: o.item_data?.name ?? o.id });
+      }
+      cursor = json.cursor;
+    } while (cursor && items.length < 1000);
+    items.sort((a, b) => a.name.localeCompare(b.name));
+    return { items };
+  });
+
 export const syncSquareLocation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({

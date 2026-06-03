@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { listLocations } from "@/lib/admin.functions";
 import { deleteDessert, listDesserts, setDessertOfMonth, upsertDessert } from "@/lib/desserts.functions";
+import { listSquareCatalogItems } from "@/lib/square.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -188,7 +189,11 @@ function EditDialog({ initial, locations, onClose }: { initial: DessertRow | nul
             <div><Label>Active from</Label><Input type="date" value={activeFrom} onChange={(e) => setActiveFrom(e.target.value)} /></div>
             <div><Label>Active to</Label><Input type="date" value={activeTo} onChange={(e) => setActiveTo(e.target.value)} /></div>
           </div>
-          <div><Label>Square item ID (optional)</Label><Input value={squareItemId} onChange={(e) => setSquareItemId(e.target.value)} placeholder="Link to a Square catalog item" /></div>
+          <SquareItemPicker
+            locationId={locationId === "__all" ? null : locationId}
+            value={squareItemId}
+            onChange={setSquareItemId}
+          />
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
@@ -249,7 +254,11 @@ function PickMonthDialog({ locations, onClose }: { locations: Array<{ id: string
               ))}
             </div>
           </div>
-          <div><Label>Square item ID (optional)</Label><Input value={squareItemId} onChange={(e) => setSquareItemId(e.target.value)} /></div>
+          <SquareItemPicker
+            locationId={selected[0] ?? null}
+            value={squareItemId}
+            onChange={setSquareItemId}
+          />
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
@@ -257,5 +266,34 @@ function PickMonthDialog({ locations, onClose }: { locations: Array<{ id: string
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function SquareItemPicker({ locationId, value, onChange }: { locationId: string | null; value: string; onChange: (v: string) => void }) {
+  const fetchItems = useServerFn(listSquareCatalogItems);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["square-catalog", locationId ?? "any"],
+    queryFn: () => fetchItems({ data: { locationId: locationId ?? undefined } }),
+  });
+  const items = data?.items ?? [];
+  return (
+    <div>
+      <Label>POS product (optional)</Label>
+      {isLoading ? (
+        <p className="text-xs text-muted-foreground mt-1">Loading products from Square…</p>
+      ) : error ? (
+        <p className="text-xs text-destructive mt-1">Failed to load Square products.</p>
+      ) : items.length === 0 ? (
+        <p className="text-xs text-muted-foreground mt-1">No Square products available. Connect Square for this location first.</p>
+      ) : (
+        <Select value={value || "__none"} onValueChange={(v) => onChange(v === "__none" ? "" : v)}>
+          <SelectTrigger><SelectValue placeholder="Select a product…" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none">— None —</SelectItem>
+            {items.map((it) => <SelectItem key={it.id} value={it.id}>{it.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      )}
+    </div>
   );
 }
