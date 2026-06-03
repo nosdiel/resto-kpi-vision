@@ -281,10 +281,57 @@ async function runSquareSync(locationId: string, startDate: string, endDate: str
       return { ok: false, daysSynced: 0, error: SQUARE_CONNECTION_ERROR };
     }
 
+    // Load dessert items for this location that have a linked Square item, with their active windows.
+    const { data: desserts } = await supabaseAdmin
+      .from("dessert_items")
+      .select("square_item_id, location_id, active_from, active_to")
+      .not("square_item_id", "is", null);
+    const dessertsForLoc = (desserts ?? []).filter(
+      (d) => d.location_id === null || d.location_id === locationId,
+    );
+
+    // Resolve each Square ITEM id to the set of catalog_object_ids (variations) we should count.
+    const itemIdToCatalogIds = new Map<string, string[]>();
+    for (const d of dessertsForLoc) {
+      const itemId = d.square_item_id as string;
+      if (itemIdToCatalogIds.has(itemId)) continue;
+      try {
+        const r = await fetch(`${squareBase(env)}/v2/catalog/object/${encodeURIComponent(itemId)}?include_related_objects=false`, {
+          headers: squareHeaders(conn.access_token),
+        });
+        if (!r.ok) { itemIdToCatalogIds.set(itemId, [itemId]); continue; }
+        const j = (await r.json()) as { object?: { item_data?: { variations?: Array<{ id: string }> } } };
+        const variationIds = j.object?.item_data?.variations?.map((v) => v.id) ?? [];
+        itemIdToCatalogIds.set(itemId, [itemId, ...variationIds]);
+      } catch {
+        itemIdToCatalogIds.set(itemId, [itemId]);
+      }
+    }
+
+    // For a given business_date, which catalog_object_ids count toward dessert sales?
+    const activeCatalogIdsForDate = (date: string): Set<string> => {
+      const out = new Set<string>();
+      for (const d of dessertsForLoc) {
+        if (d.active_from && date < d.active_from) continue;
+        if (d.active_to && date > d.active_to) continue;
+        const ids = itemIdToCatalogIds.get(d.square_item_id as string) ?? [];
+        for (const id of ids) out.add(id);
+      }
+      return out;
+    };
+
     const beginIso = new Date(`${startDate}T00:00:00Z`).toISOString();
     const endIso = new Date(`${endDate}T23:59:59Z`).toISOString();
     let cursor: string | undefined = undefined;
-    const ordersByDate: Record<string, { sales: number; count: number }> = {};
+    const ordersByDate: Record<string, { sales: number; count: number; dessertQty: number }> = {};
+    const catalogIdCache = new Map<string, Set<string>>();
+    const getActiveIds = (date: string) => {
+      const cached = catalogIdCache.get(date);
+      if (cached) return cached;
+      const ids = activeCatalogIdsForDate(date);
+      catalogIdCache.set(date, ids);
+      return ids;
+    };
 
     do {
       const res = await fetch(`${squareBase(env)}/v2/orders/search`, {
@@ -307,14 +354,25 @@ async function runSquareSync(locationId: string, startDate: string, endDate: str
         console.error("Square sync failed", { status: res.status, environment: env, locationId, squareLocationId: conn.square_location_id, response });
         return { ok: false, daysSynced: 0, error: res.status === 401 || res.status === 403 ? SQUARE_CONNECTION_ERROR : `Square API error ${res.status}: ${response}` };
       }
-      const json = (await res.json()) as { orders?: Array<{ closed_at?: string; total_money?: { amount?: number } }>; cursor?: string };
+      const json = (await res.json()) as { orders?: Array<{ closed_at?: string; total_money?: { amount?: number }; line_items?: Array<{ catalog_object_id?: string; quantity?: string }> }>; cursor?: string };
       for (const o of json.orders ?? []) {
         if (!o.closed_at) continue;
         const date = o.closed_at.slice(0, 10);
         const sales = (o.total_money?.amount ?? 0) / 100;
-        if (!ordersByDate[date]) ordersByDate[date] = { sales: 0, count: 0 };
+        if (!ordersByDate[date]) ordersByDate[date] = { sales: 0, count: 0, dessertQty: 0 };
         ordersByDate[date].sales += sales;
         ordersByDate[date].count += 1;
+        if (dessertsForLoc.length > 0 && o.line_items?.length) {
+          const activeIds = getActiveIds(date);
+          if (activeIds.size > 0) {
+            for (const li of o.line_items) {
+              if (li.catalog_object_id && activeIds.has(li.catalog_object_id)) {
+                const qty = Number(li.quantity ?? "0");
+                if (Number.isFinite(qty)) ordersByDate[date].dessertQty += qty;
+              }
+            }
+          }
+        }
       }
       cursor = json.cursor;
     } while (cursor);
@@ -324,6 +382,7 @@ async function runSquareSync(locationId: string, startDate: string, endDate: str
       business_date: date,
       actual_sales: Number(agg.sales.toFixed(2)),
       actual_customer_count: agg.count,
+      dessert_count: Math.round(agg.dessertQty),
       source: "square" as const,
       last_synced_at: new Date().toISOString(),
     }));
