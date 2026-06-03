@@ -169,6 +169,7 @@
   [data-slot="sidebar-container"],
   [data-slot="sidebar-gap"],
   [data-sidebar="trigger"],
+  aside,
   header.print\:hidden,
   .print\:hidden { display: none !important; }
   html, body { background: white !important; }
